@@ -145,11 +145,10 @@ class DemoStorage(BaseConfig):
         for factory in self.config.factories:
             if factory.name == 'changes':
                 changes = factory.open()
+            elif base is None:
+                base = factory.open()
             else:
-                if base is None:
-                    base = factory.open()
-                else:
-                    raise ValueError("Too many base storages defined!")
+                raise ValueError("Too many base storages defined!")
 
         from ZODB.DemoStorage import DemoStorage
         return DemoStorage(self.config.name, base=base, changes=changes)

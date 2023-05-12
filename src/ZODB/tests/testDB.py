@@ -35,7 +35,7 @@ checker = renormalizing.RENormalizing([
 
 # Return total number of connections across all pools in a db._pools.
 def nconn(pools):
-    return sum([len(pool.all) for pool in pools.values()])
+    return sum(len(pool.all) for pool in pools.values())
 
 class DBTests(ZODB.tests.util.TestCase):
 

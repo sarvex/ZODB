@@ -175,10 +175,9 @@ def truncate(f, pos, file_size, outp):
             i += 1
         else:
             break
-    tr = open(_trname, "wb")
-    copy(f, tr, file_size - pos)
-    f.seek(pos)
-    tr.close()
+    with open(_trname, "wb") as tr:
+        copy(f, tr, file_size - pos)
+        f.seek(pos)
 
 def copy(src, dst, n):
     while n:
@@ -264,130 +263,125 @@ def recover(inp, outp, verbose=0, partial=False, force=False, pack=None):
     print("Recovering", inp, "into", outp)
 
     if os.path.exists(outp) and not force:
-        die("%s exists" % outp)
+        die(f"{outp} exists")
 
-    f = open(inp, "rb")
-    if f.read(4) != ZODB.FileStorage.packed_version:
-        die("input is not a file storage")
+    with open(inp, "rb") as f:
+        if f.read(4) != ZODB.FileStorage.packed_version:
+            die("input is not a file storage")
 
-    f.seek(0,2)
-    file_size = f.tell()
+        f.seek(0,2)
+        file_size = f.tell()
 
-    ofs = ZODB.FileStorage.FileStorage(outp, create=1)
-    _ts = None
-    ok = 1
-    prog1 = 0
-    undone = 0
+        ofs = ZODB.FileStorage.FileStorage(outp, create=1)
+        _ts = None
+        ok = 1
+        prog1 = 0
+        undone = 0
 
-    pos = 4
-    ltid = None
-    while pos:
-        try:
-            npos, txn, tid = read_txn_header(f, pos, file_size, outp, ltid)
-        except EOFError:
-            break
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception as err:
-            print("error reading txn header:", err)
-            if not verbose:
-                progress(prog1)
-            pos = scan(f, pos)
-            if verbose > 1:
-                print("looking for valid txn header at", pos)
-            continue
-        ltid = tid
-
-        if txn is None:
-            undone = undone + npos - pos
-            pos = npos
-            continue
-        else:
-            pos = npos
-
-        tid = txn.tid
-
-        if _ts is None:
-            _ts = TimeStamp(tid)
-        else:
-            t = TimeStamp(tid)
-            if t <= _ts:
-                if ok:
-                    print(("Time stamps out of order %s, %s" % (_ts, t)))
-                ok = 0
-                _ts = t.laterThan(_ts)
-                tid = _ts.raw()
-            else:
-                _ts = t
-                if not ok:
-                    print(("Time stamps back in order %s" % (t)))
-                    ok = 1
-
-        ofs.tpc_begin(txn, tid, txn.status)
-
-        if verbose:
-            print("begin", pos, _ts, end=' ')
-            if verbose > 1:
-                print()
-            sys.stdout.flush()
-
-        nrec = 0
-        try:
-            for r in txn:
+        pos = 4
+        ltid = None
+        while pos:
+            try:
+                npos, txn, tid = read_txn_header(f, pos, file_size, outp, ltid)
+            except EOFError:
+                break
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as err:
+                print("error reading txn header:", err)
+                if not verbose:
+                    progress(prog1)
+                pos = scan(f, pos)
                 if verbose > 1:
-                    if r.data is None:
-                        l = "bp"
-                    else:
-                        l = len(r.data)
+                    print("looking for valid txn header at", pos)
+                continue
+            ltid = tid
 
-                    print("%7d %s %s" % (u64(r.oid), l))
-                ofs.restore(r.oid, r.tid, r.data, '', r.data_txn,
-                            txn)
-                nrec += 1
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception as err:
-            if partial and nrec:
-                ofs._status = "p"
+            if txn is None:
+                undone = undone + npos - pos
+                pos = npos
+                continue
+            else:
+                pos = npos
+
+            tid = txn.tid
+
+            if _ts is None:
+                _ts = TimeStamp(tid)
+            else:
+                t = TimeStamp(tid)
+                if t <= _ts:
+                    if ok:
+                        print(f"Time stamps out of order {_ts}, {t}")
+                    ok = 0
+                    _ts = t.laterThan(_ts)
+                    tid = _ts.raw()
+                else:
+                    _ts = t
+                    if not ok:
+                        print(f"Time stamps back in order {_ts}")
+                        ok = 1
+
+            ofs.tpc_begin(txn, tid, txn.status)
+
+            if verbose:
+                print("begin", pos, _ts, end=' ')
+                if verbose > 1:
+                    print()
+                sys.stdout.flush()
+
+            nrec = 0
+            try:
+                for r in txn:
+                    if verbose > 1:
+                        l = "bp" if r.data is None else len(r.data)
+                        print("%7d %s %s" % (u64(r.oid), l))
+                    ofs.restore(r.oid, r.tid, r.data, '', r.data_txn,
+                                txn)
+                    nrec += 1
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as err:
+                if partial and nrec:
+                    ofs._status = "p"
+                    ofs.tpc_vote(txn)
+                    ofs.tpc_finish(txn)
+                    if verbose:
+                        print("partial")
+                else:
+                    ofs.tpc_abort(txn)
+                print("error copying transaction:", err)
+                if not verbose:
+                    progress(prog1)
+                pos = scan(f, pos)
+                if verbose > 1:
+                    print("looking for valid txn header at", pos)
+            else:
                 ofs.tpc_vote(txn)
                 ofs.tpc_finish(txn)
                 if verbose:
-                    print("partial")
-            else:
-                ofs.tpc_abort(txn)
-            print("error copying transaction:", err)
+                    print("finish")
+                    sys.stdout.flush()
+
             if not verbose:
-                progress(prog1)
-            pos = scan(f, pos)
-            if verbose > 1:
-                print("looking for valid txn header at", pos)
-        else:
-            ofs.tpc_vote(txn)
-            ofs.tpc_finish(txn)
-            if verbose:
-                print("finish")
-                sys.stdout.flush()
-
-        if not verbose:
-            prog = pos * 20 / file_size
-            while prog > prog1:
-                prog1 = prog1 + 1
-                iprogress(prog1)
+                prog = pos * 20 / file_size
+                while prog > prog1:
+                    prog1 += 1
+                    iprogress(prog1)
 
 
-    bad = file_size - undone - ofs._pos
+        bad = file_size - undone - ofs._pos
 
-    print("\n%s bytes removed during recovery" % bad)
-    if undone:
-        print("%s bytes of undone transaction data were skipped" % undone)
+        print("\n%s bytes removed during recovery" % bad)
+        if undone:
+            print(f"{undone} bytes of undone transaction data were skipped")
 
-    if pack is not None:
-        print("Packing ...")
-        from ZODB.serialize import referencesf
-        ofs.pack(pack, referencesf)
+        if pack is not None:
+            print("Packing ...")
+            from ZODB.serialize import referencesf
+            ofs.pack(pack, referencesf)
 
-    ofs.close()
-    f.close()
+        ofs.close()
 
 if __name__ == "__main__":
     main()

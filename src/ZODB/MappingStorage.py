@@ -90,8 +90,7 @@ class MappingStorage(object):
     # ZEO.interfaces.IServeable
     @ZODB.utils.locked(opened)
     def getTid(self, oid):
-        tid_data = self._data.get(oid)
-        if tid_data:
+        if tid_data := self._data.get(oid):
             return tid_data.maxKey()
         raise ZODB.POSException.POSKeyError(oid)
 
@@ -122,8 +121,7 @@ class MappingStorage(object):
 
     # ZODB.interfaces.IStorageIteration
     def iterator(self, start=None, end=None):
-        for transaction_record in self._transactions.values(start, end):
-            yield transaction_record
+        yield from self._transactions.values(start, end)
 
     # ZODB.interfaces.IStorage
     @ZODB.utils.locked(opened)
@@ -139,8 +137,7 @@ class MappingStorage(object):
     @ZODB.utils.locked(opened)
     def load(self, oid, version=''):
         assert not version, "Versions are not supported"
-        tid_data = self._data.get(oid)
-        if tid_data:
+        if tid_data := self._data.get(oid):
             tid = tid_data.maxKey()
             return tid_data[tid], tid
         raise ZODB.POSException.POSKeyError(oid)
@@ -148,28 +145,24 @@ class MappingStorage(object):
     # ZODB.interfaces.IStorage
     @ZODB.utils.locked(opened)
     def loadBefore(self, oid, tid):
-        tid_data = self._data.get(oid)
-        if tid_data:
-            before = ZODB.utils.u64(tid)
-            if not before:
-                return None
-            before = ZODB.utils.p64(before-1)
-            tids_before = tid_data.keys(None, before)
-            if tids_before:
-                tids_after = tid_data.keys(tid, None)
-                tid = tids_before[-1]
-                return (tid_data[tid], tid,
-                        (tids_after and tids_after[0] or None)
-                        )
-        else:
+        if not (tid_data := self._data.get(oid)):
             raise ZODB.POSException.POSKeyError(oid)
+        before = ZODB.utils.u64(tid)
+        if not before:
+            return None
+        before = ZODB.utils.p64(before-1)
+        if tids_before := tid_data.keys(None, before):
+            tids_after = tid_data.keys(tid, None)
+            tid = tids_before[-1]
+            return (tid_data[tid], tid,
+                    (tids_after and tids_after[0] or None)
+                    )
 
 
     # ZODB.interfaces.IStorage
     @ZODB.utils.locked(opened)
     def loadSerial(self, oid, serial):
-        tid_data = self._data.get(oid)
-        if tid_data:
+        if tid_data := self._data.get(oid):
             try:
                 return tid_data[serial]
             except KeyError:
@@ -204,16 +197,16 @@ class MappingStorage(object):
             if tids_to_remove:
                 tids_to_remove.pop()    # Keep the last, if any
 
-                if tids_to_remove:
-                    for tid in tids_to_remove:
-                        del tid_data[tid]
-                        if transactions[tid].pack(oid):
-                            del transactions[tid]
+            if tids_to_remove:
+                for tid in tids_to_remove:
+                    del tid_data[tid]
+                    if transactions[tid].pack(oid):
+                        del transactions[tid]
 
         if gc:
             # Step 2, GC.  A simple sweep+copy
             new_data = BTrees.OOBTree.OOBTree()
-            to_copy = set([ZODB.utils.z64])
+            to_copy = {ZODB.utils.z64}
             while to_copy:
                 oid = to_copy.pop()
                 tid_data = self._data.pop(oid)
@@ -249,8 +242,7 @@ class MappingStorage(object):
             raise ZODB.POSException.StorageTransactionError(self, transaction)
 
         old_tid = None
-        tid_data = self._data.get(oid)
-        if tid_data:
+        if tid_data := self._data.get(oid):
             old_tid = tid_data.maxKey()
             if serial != old_tid:
                 raise ZODB.POSException.ConflictError(
@@ -284,10 +276,7 @@ class MappingStorage(object):
         self._transaction = transaction
         self._tdata = {}
         if tid is None:
-            if self._transactions:
-                old_tid = self._transactions.maxKey()
-            else:
-                old_tid = None
+            old_tid = self._transactions.maxKey() if self._transactions else None
             tid = ZODB.utils.newTid(old_tid)
         self._tid = tid
 

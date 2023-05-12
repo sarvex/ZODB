@@ -88,10 +88,13 @@ class MinimalMemoryStorage(BaseStorage, object):
         if txn is not self._transaction:
             raise POSException.StorageTransactionError(self, txn)
         assert not v
-        if self._cur.get(oid) != serial:
-            if not (serial is None or self._cur.get(oid) in [None, z64]):
-                raise POSException.ConflictError(
-                    oid=oid, serials=(self._cur.get(oid), serial), data=data)
+        if (
+            self._cur.get(oid) != serial
+            and serial is not None
+            and self._cur.get(oid) not in [None, z64]
+        ):
+            raise POSException.ConflictError(
+                oid=oid, serials=(self._cur.get(oid), serial), data=data)
         self._txn.store(oid, data)
         return self._tid
 
@@ -117,10 +120,7 @@ class MinimalMemoryStorage(BaseStorage, object):
                 return None
             tid = tids[i]
             j = i + 1
-            if j == len(tids):
-                end_tid = None
-            else:
-                end_tid = tids[j]
+            end_tid = None if j == len(tids) else tids[j]
             return self._index[(the_oid, tid)], tid, end_tid
 
     def loadSerial(self, oid, serial):

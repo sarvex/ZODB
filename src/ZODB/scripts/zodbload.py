@@ -171,7 +171,7 @@ class MBox:
             min = start = 0
 
         if filename.endswith('.bz2'):
-            f = os.popen("bunzip2 <"+filename, 'r')
+            f = os.popen(f"bunzip2 <{filename}", 'r')
             filename = filename[-4:]
         else:
             f = open(filename)
@@ -212,21 +212,20 @@ def mailfolder(app, mboxname, number):
         from BTrees.Length import Length
         mail.length = Length()
         for i in range(bins):
-            mail.manage_addFolder('b'+str(i))
+            mail.manage_addFolder(f'b{str(i)}')
     bin = hash(str(number))%bins
-    return getattr(mail, 'b'+str(bin))
+    return getattr(mail, f'b{str(bin)}')
 
 
 def VmSize():
 
     try:
-        with open('/proc/%s/status' % os.getpid()) as f:
+        with open(f'/proc/{os.getpid()}/status') as f:
             lines = f.readlines()
     except:
         return 0
     else:
-        l = list(filter(lambda l: l[:7] == 'VmSize:', lines))
-        if l:
+        if l := list(filter(lambda l: l[:7] == 'VmSize:', lines)):
             l = l[0][7:].strip().split()[0]
             return int(l)
     return 0
@@ -281,12 +280,11 @@ def do(db, f, args):
             t=time.time()
             c=time.clock()
             try:
-                try:
-                    r = f(connection, *args)
-                except ConflictError:
-                    rconflicts += 1
-                    transaction.abort()
-                    continue
+                r = f(connection, *args)
+            except ConflictError:
+                rconflicts += 1
+                transaction.abort()
+                continue
             finally:
                 wcomp += time.time() - t
                 ccomp += time.clock() - c
@@ -294,13 +292,12 @@ def do(db, f, args):
             t=time.time()
             c=time.clock()
             try:
-                try:
-                    transaction.commit()
-                    break
-                except ConflictError:
-                    wconflicts += 1
-                    transaction.abort()
-                    continue
+                transaction.commit()
+                break
+            except ConflictError:
+                wconflicts += 1
+                transaction.abort()
+                continue
             finally:
                 wcommit += time.time() - t
                 ccommit += time.clock() - c
@@ -344,7 +341,7 @@ def index(connection, messages, catalog, max):
                     del mail.__dict__[d['id']]
                 mail._objects = _objects[len(_objects)-max+1:]
 
-        docid = 'm'+str(message.number)
+        docid = f'm{str(message.number)}'
         mail.manage_addDTMLDocument(docid, file=message.body)
 
         # increment counted
@@ -360,11 +357,11 @@ def index(connection, messages, catalog, max):
             if name=='subject':
                 name='title'
             v = h[l+1:].strip()
-            type='string'
-
             if name=='title':
                 doc.manage_changeProperties(title=h)
             else:
+                type='string'
+
                 try:
                     doc.manage_addProperty(name, v, type)
                 except:
@@ -380,11 +377,11 @@ class IndexJob:
     prefix = 'index'
 
     def __init__(self, mbox, number=1, max=0):
-        self.__name__ = "%s%s_%s" % (self.prefix, number, mbox.__name__)
+        self.__name__ = f"{self.prefix}{number}_{mbox.__name__}"
         self.mbox, self.number, self.max = mbox, int(number), int(max)
 
     def create(self):
-        messages = [next(self.mbox) for i in range(self.number)]
+        messages = [next(self.mbox) for _ in range(self.number)]
         return index, (messages, self.catalog, self.max)
 
 
@@ -399,17 +396,17 @@ def edit(connection, mbox, catalog=1):
     mail = getattr(app, mbox.__name__, None)
     if mail is None:
         time.sleep(1)
-        return "No mailbox %s" % mbox.__name__
+        return f"No mailbox {mbox.__name__}"
 
     nmessages = mail.length()
     if nmessages < 2:
         time.sleep(1)
-        return "No messages to edit in %s" % mbox.__name__
+        return f"No messages to edit in {mbox.__name__}"
 
     # find a message to edit:
     while 1:
         number = random.randint(1, nmessages-1)
-        did = 'm' + str(number)
+        did = f'm{number}'
 
         mail = mailfolder(app, mbox.__name__, number)
         doc = getattr(mail, did, None)
@@ -428,15 +425,14 @@ def edit(connection, mbox, catalog=1):
     for j in range(ndel):
         j = random.randint(0,len(text)-1)
         word = text[j]
-        m = wordre.search(word)
-        if m:
+        if m := wordre.search(word):
             word = m.group(1).lower()
             if (word not in wordsd) and word not in stop:
                 words.append(word)
                 wordsd[word] = 1
         del text[j]
 
-    for j in range(nins):
+    for _ in range(nins):
         word = random.choice(words)
         text.append(word)
 
@@ -453,7 +449,7 @@ class EditJob:
     catalog = 1
 
     def __init__(self, mbox):
-        self.__name__ = "%s_%s" % (self.prefix, mbox.__name__)
+        self.__name__ = f"{self.prefix}_{mbox.__name__}"
         self.mbox = mbox
 
     def create(self):
@@ -469,7 +465,7 @@ def search(connection, terms, number):
     cat = app.cat
     n = 0
 
-    for i in number:
+    for _ in number:
         term = random.choice(terms)
 
         results = cat(PrincipiaSearchSource=term)
@@ -686,68 +682,59 @@ words=['banishment', 'indirectly', 'imprecise', 'peeks',
 'demandingly', 'broader', 'spiders', 'Marsha', 'debris', 'operates',
 'Dundee', 'alleles', 'crunchier', 'quizzical', 'hanging', 'Fisk']
 
-wordsd = {}
-for word in words:
-    wordsd[word] = 1
+wordsd = {word: 1 for word in words}
 
 
 def collect_options(args, jobs, options):
 
     while args:
         arg = args.pop(0)
-        if arg.startswith('-'):
-            name = arg[1:]
-            if name == 'options':
-                fname = args.pop(0)
-                d = {}
-                with open(fname) as fp:
-                    exec(compile(fp.read(), fname, 'exec'), d)
-                collect_options(list(d['options']), jobs, options)
-            elif name in options:
-                v = args.pop(0)
-                if options[name] != None:
-                    raise ValueError(
-                        "Duplicate values for %s, %s and %s"
-                        % (name, v, options[name])
-                        )
-                options[name] = v
-            elif name == 'setup':
-                options['setup'] = 1
-            elif name.capitalize()+'Job' in globals():
-                job = name
-                kw = {}
-                while args and args[0].find("=") > 0:
-                    arg = args.pop(0).split('=')
-                    name, v = arg[0], '='.join(arg[1:])
-                    if name in kw:
-                        raise ValueError(
-                            "Duplicate parameter %s for job %s"
-                            % (name, job)
-                            )
-                    kw[name]=v
-                if 'frequency' in kw:
-                    frequency = kw['frequency']
-                    del kw['frequency']
-                else:
-                    frequency = 1
-
-                if 'sleep' in kw:
-                    sleep = float(kw['sleep'])
-                    del kw['sleep']
-                else:
-                    sleep = 0.0001
-
-                if 'repeat' in kw:
-                    repeatp = float(kw['repeat'])
-                    del kw['repeat']
-                else:
-                    repeatp = 0
-
-                jobs.append((job, kw, frequency, sleep, repeatp))
-            else:
-                raise ValueError("not an option or job", name)
-        else:
+        if not arg.startswith('-'):
             raise ValueError("Expected an option", arg)
+        name = arg[1:]
+        if name == 'options':
+            fname = args.pop(0)
+            d = {}
+            with open(fname) as fp:
+                exec(compile(fp.read(), fname, 'exec'), d)
+            collect_options(list(d['options']), jobs, options)
+        elif name in options:
+            v = args.pop(0)
+            if options[name] != None:
+                raise ValueError(f"Duplicate values for {name}, {v} and {options[name]}")
+            options[name] = v
+        elif name == 'setup':
+            options['setup'] = 1
+        elif f'{name.capitalize()}Job' in globals():
+            job = name
+            kw = {}
+            while args and args[0].find("=") > 0:
+                arg = args.pop(0).split('=')
+                name, v = arg[0], '='.join(arg[1:])
+                if name in kw:
+                    raise ValueError(f"Duplicate parameter {name} for job {job}")
+                kw[name]=v
+            if 'frequency' in kw:
+                frequency = kw['frequency']
+                del kw['frequency']
+            else:
+                frequency = 1
+
+            if 'sleep' in kw:
+                sleep = float(kw['sleep'])
+                del kw['sleep']
+            else:
+                sleep = 0.0001
+
+            if 'repeat' in kw:
+                repeatp = float(kw['repeat'])
+                del kw['repeat']
+            else:
+                repeatp = 0
+
+            jobs.append((job, kw, frequency, sleep, repeatp))
+        else:
+            raise ValueError("not an option or job", name)
 
 
 def find_lib_python():
@@ -791,17 +778,17 @@ def main(args=None):
 
     jobs = JobProducer()
     for job, kw, frequency, sleep, repeatp in jobdefs:
-        Job = globals()[job.capitalize()+'Job']
+        Job = globals()[f'{job.capitalize()}Job']
         if getattr(Job, 'needs_mbox', 0):
-            if "mbox" not in kw:
-                if not options["mbox"]:
-                    raise ValueError(
-                        "no mailbox (mbox option) file  specified")
-                kw['mbox'] = mboxes[options["mbox"]]
-            else:
+            if "mbox" in kw:
                 if not mboxes.has_key[kw["mbox"]]:
                     mboxes[kw['mbox']] = MBox[kw['mbox']]
                 kw["mbox"] = mboxes[kw['mbox']]
+            elif options["mbox"]:
+                kw['mbox'] = mboxes[options["mbox"]]
+            else:
+                raise ValueError(
+                    "no mailbox (mbox option) file  specified")
         jobs.add(Job(**kw), frequency, sleep, repeatp)
 
     if not jobs:

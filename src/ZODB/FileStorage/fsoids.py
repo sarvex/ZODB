@@ -29,7 +29,7 @@ def shorten(s, size=50):
     navail = size - 5
     nleading = navail // 2
     ntrailing = size - nleading
-    return s[:nleading] + " ... " + s[-ntrailing:]
+    return f"{s[:nleading]} ... {s[-ntrailing:]}"
 
 class Tracer(object):
     """Trace all occurrences of a set of oids in a FileStorage.
@@ -165,11 +165,11 @@ class Tracer(object):
     def _check_drec(self, drec):
         # drec has members oid, tid, data, data_txn
         tid, oid, pick, pos = drec.tid, drec.oid, drec.data, drec.pos
-        ref2name = self._ref2name
-        ref2name_get = ref2name.get
-        records_map_get = self._records_map.get
         if pick:
             oid_in_oids = oid in self.oids
+            ref2name = self._ref2name
+            ref2name_get = ref2name.get
+            records_map_get = self._records_map.get
             for ref, klass in get_refs(pick):
                 if ref in self.oids:
                     oidclass = ref2name_get(oid, None)
@@ -194,7 +194,7 @@ class Tracer(object):
                     elif isinstance(klass, tuple):
                         ref2name[ref] = klass = "%s.%s" % klass
                     else:
-                        klass = "%s.%s" % (klass.__module__, klass.__name__)
+                        klass = f"{klass.__module__}.{klass.__name__}"
 
                     self._msg(oid, tid, "references", oid_repr(ref), klass,
                               "at", pos)

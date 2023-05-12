@@ -105,8 +105,8 @@ class Broken(object):
 
     __name__ = 'broken object'
 
-    def __new__(class_, *args):
-        result = object.__new__(class_)
+    def __new__(cls, *args):
+        result = object.__new__(cls)
         result.__dict__['__Broken_newargs__'] = args
         return result
 
@@ -126,8 +126,7 @@ class Broken(object):
         self.__dict__['__Broken_state__'] = state
 
     def __repr__(self):
-        return "<broken %s.%s instance>" % (
-            self.__class__.__module__, self.__class__.__name__)
+        return f"<broken {self.__class__.__module__}.{self.__class__.__name__} instance>"
 
     def __setattr__(self, name, value):
         raise BrokenModified("Can't change broken objects")
@@ -323,8 +322,8 @@ class PersistentBroken(Broken, persistent.Persistent):
 
         """
 
-    def __new__(class_, *args):
-        result = persistent.Persistent.__new__(class_)
+    def __new__(cls, *args):
+        result = persistent.Persistent.__new__(cls)
         result.__dict__['__Broken_newargs__'] = args
         return result
 

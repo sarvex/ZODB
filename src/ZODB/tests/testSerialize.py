@@ -62,14 +62,16 @@ class SerializerTestCase(unittest.TestCase):
     def test_getClassName(self):
         r = serialize.ObjectReader(factory=_factory)
         eq = self.assertEqual
-        eq(r.getClassName(self.old_style_with_newargs),
-           __name__ + ".ClassWithNewargs")
-        eq(r.getClassName(self.new_style_with_newargs),
-           __name__ + ".ClassWithNewargs")
-        eq(r.getClassName(self.old_style_without_newargs),
-           __name__ + ".ClassWithoutNewargs")
-        eq(r.getClassName(self.new_style_without_newargs),
-           __name__ + ".ClassWithoutNewargs")
+        eq(r.getClassName(self.old_style_with_newargs), f"{__name__}.ClassWithNewargs")
+        eq(r.getClassName(self.new_style_with_newargs), f"{__name__}.ClassWithNewargs")
+        eq(
+            r.getClassName(self.old_style_without_newargs),
+            f"{__name__}.ClassWithoutNewargs",
+        )
+        eq(
+            r.getClassName(self.new_style_without_newargs),
+            f"{__name__}.ClassWithoutNewargs",
+        )
 
     def test_getGhost(self):
         # Use a TestObjectReader since we need _get_class() to be

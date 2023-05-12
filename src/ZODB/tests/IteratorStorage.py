@@ -114,8 +114,6 @@ class IteratorStorage(IteratorCompare):
             self._storage.tpc_vote(t)
             # Don't do tpc_finish yet
             it = self._storage.iterator()
-            for x in it:
-                pass
         finally:
             self._storage.tpc_finish(t)
 

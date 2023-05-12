@@ -323,10 +323,11 @@ class RecoveryBlobStorage(BlobTestBase,
         conn.root()[3] = ZODB.blob.Blob()
         with conn.root()[3].open('w') as file:
             file.write(
-                (b''.join(struct.pack(">I", random.randint(0, (1<<32)-1))
-                         for i in range(random.randint(10000,20000)))
-                 )[:-random.randint(1,4)]
-                )
+                b''.join(
+                    struct.pack(">I", random.randint(0, (1 << 32) - 1))
+                    for _ in range(random.randint(10000, 20000))
+                )[: -random.randint(1, 4)]
+            )
         transaction.commit()
         conn.root()[2] = ZODB.blob.Blob()
         with conn.root()[2].open('w') as file:
@@ -715,8 +716,8 @@ def setUpBlobAdaptedFileStorage(test):
 
     def create_storage(name='data', blob_dir=None):
         if blob_dir is None:
-            blob_dir = '%s.bobs' % name
-        return ZODB.blob.BlobStorage(blob_dir, FileStorage('%s.fs' % name))
+            blob_dir = f'{name}.bobs'
+        return ZODB.blob.BlobStorage(blob_dir, FileStorage(f'{name}.fs'))
 
     test.globs['create_storage'] = create_storage
 
@@ -734,7 +735,7 @@ def storage_reusable_suite(prefix, factory,
         setUp(test)
         def create_storage(name='data', blob_dir=None):
             if blob_dir is None:
-                blob_dir = '%s.bobs' % name
+                blob_dir = f'{name}.bobs'
             return factory(name, blob_dir)
 
         test.globs['create_storage'] = create_storage
@@ -781,7 +782,7 @@ def storage_reusable_suite(prefix, factory,
 
     def create_storage(self, name='data', blob_dir=None):
         if blob_dir is None:
-            blob_dir = '%s.bobs' % name
+            blob_dir = f'{name}.bobs'
         return factory(name, blob_dir)
 
     def add_test_based_on_test_class(class_):
@@ -796,7 +797,7 @@ def storage_reusable_suite(prefix, factory,
     if test_undo:
         add_test_based_on_test_class(BlobUndoTests)
 
-    suite.layer = ZODB.tests.util.MininalTestLayer(prefix+'BlobTests')
+    suite.layer = ZODB.tests.util.MininalTestLayer(f'{prefix}BlobTests')
 
     return suite
 
@@ -828,13 +829,16 @@ def test_suite():
             (re.compile(r"u('[^']*')"), r"\1"),
             ]),
         ))
-    suite.addTest(storage_reusable_suite(
-        'BlobAdaptedFileStorage',
-        lambda name, blob_dir:
-        ZODB.blob.BlobStorage(blob_dir, FileStorage('%s.fs' % name)),
-        test_blob_storage_recovery=True,
-        test_packing=True,
-        ))
+    suite.addTest(
+        storage_reusable_suite(
+            'BlobAdaptedFileStorage',
+            lambda name, blob_dir: ZODB.blob.BlobStorage(
+                blob_dir, FileStorage(f'{name}.fs')
+            ),
+            test_blob_storage_recovery=True,
+            test_packing=True,
+        )
+    )
 
     return suite
 

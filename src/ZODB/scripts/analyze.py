@@ -51,10 +51,9 @@ def shorten(s, n):
         if i == -1:
             # In the worst case, just return the rightmost n bytes
             return s[-n:]
-        else:
-            s = s[i + 1:]
-            l = len(s)
-    return "..." + s
+        s = s[i + 1:]
+        l = len(s)
+    return f"...{s}"
 
 def report(rep):
     print("Processed %d records in %d transactions" % (rep.OIDS, rep.TIDS))
@@ -108,13 +107,12 @@ def get_type(record):
     try:
         unpickled = FakeUnpickler(BytesIO(record.data)).load()
     except FakeError as err:
-        return "%s.%s" % (err.module, err.name)
+        return f"{err.module}.{err.name}"
     classinfo = unpickled[0]
-    if isinstance(classinfo, tuple):
-        mod, klass = classinfo
-        return "%s.%s" % (mod, klass)
-    else:
+    if not isinstance(classinfo, tuple):
         return str(classinfo)
+    mod, klass = classinfo
+    return f"{mod}.{klass}"
 
 def analyze_rec(report, record):
     oid = record.oid

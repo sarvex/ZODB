@@ -51,11 +51,10 @@ class HexStorage(object):
 
     def loadBefore(self, oid, tid):
         r = self.base.loadBefore(oid, tid)
-        if r is not None:
-            data, serial, after = r
-            return unhexlify(data[2:]), serial, after
-        else:
+        if r is None:
             return r
+        data, serial, after = r
+        return unhexlify(data[2:]), serial, after
 
     def loadSerial(self, oid, serial):
         return unhexlify(self.base.loadSerial(oid, serial)[2:])

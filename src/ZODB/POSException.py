@@ -25,8 +25,8 @@ from transaction.interfaces import TransactionError, TransactionFailedError
 import transaction.interfaces
 
 def _fmt_undo(oid, reason):
-    s = reason and (": %s" % reason) or ""
-    return "Undo error %s%s" % (oid_repr(oid), s)
+    s = reason and f": {reason}" or ""
+    return f"Undo error {oid_repr(oid)}{s}"
 
 def _recon(class_, state):
     err = class_.__new__(class_)
@@ -96,18 +96,14 @@ class ConflictError(POSError, transaction.interfaces.TransientError):
 
     def __init__(self, message=None, object=None, oid=None, serials=None,
                  data=None):
-        if message is None:
-            self.message = "database conflict error"
-        else:
-            self.message = message
-
+        self.message = "database conflict error" if message is None else message
         if object is None:
             self.oid = None
             self.class_name = None
         else:
             self.oid = object._p_oid
             klass = object.__class__
-            self.class_name = klass.__module__ + "." + klass.__name__
+            self.class_name = f"{klass.__module__}.{klass.__name__}"
 
         if oid is not None:
             assert self.oid is None
@@ -123,19 +119,18 @@ class ConflictError(POSError, transaction.interfaces.TransientError):
     def __str__(self):
         extras = []
         if self.oid:
-            extras.append("oid %s" % oid_repr(self.oid))
+            extras.append(f"oid {oid_repr(self.oid)}")
         if self.class_name:
-            extras.append("class %s" % self.class_name)
+            extras.append(f"class {self.class_name}")
         if self.serials:
             current, old = self.serials
-            extras.append("serial this txn started with %s" %
-                          readable_tid_repr(old))
-            extras.append("serial currently committed %s" %
-                          readable_tid_repr(current))
-        if extras:
-            return "%s (%s)" % (self.message, ", ".join(extras))
-        else:
-            return self.message
+            extras.extend(
+                (
+                    f"serial this txn started with {readable_tid_repr(old)}",
+                    f"serial currently committed {readable_tid_repr(current)}",
+                )
+            )
+        return f'{self.message} ({", ".join(extras)})' if extras else self.message
 
     def get_oid(self):
         return self.oid
@@ -250,8 +245,7 @@ class DanglingReferenceError(POSError, transaction.interfaces.TransactionError):
         self.missing = Boid
 
     def __str__(self):
-        return "from %s to %s" % (oid_repr(self.referer),
-                                  oid_repr(self.missing))
+        return f"from {oid_repr(self.referer)} to {oid_repr(self.missing)}"
 
 
 ############################################################################

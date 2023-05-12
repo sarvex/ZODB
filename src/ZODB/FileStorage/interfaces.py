@@ -15,7 +15,7 @@ import zope.interface
 
 class IFileStoragePacker(zope.interface.Interface):
 
-    def __call__(storage, referencesf, stop, gc):
+    def __call__(self, referencesf, stop, gc):
         """Pack the file storage into a new file
 
         The new file will have the same name as the old file with

@@ -87,9 +87,7 @@ class _p_ChangedDescr(object):
     # descriptor to handle special weird semantics of _p_changed
 
     def __get__(self, inst, cls):
-        if inst is None:
-            return self
-        return inst._p_class_dict['_p_changed']
+        return self if inst is None else inst._p_class_dict['_p_changed']
 
     def __set__(self, inst, v):
         if v is None:
@@ -107,9 +105,7 @@ class _p_MethodDescr(object):
         self.func = func
 
     def __get__(self, inst, cls):
-        if inst is None:
-            return cls
-        return self.func.__get__(inst, cls)
+        return cls if inst is None else self.func.__get__(inst, cls)
 
     def __set__(self, inst, v):
         raise AttributeError(self.__name__)
@@ -127,12 +123,11 @@ class PersistentMetaClass(type):
     _p_changed = _p_ChangedDescr()
     _p_serial = _p_DataDescr('_p_serial')
 
-    def __new__(self, name, bases, cdict, _p_changed=False):
+    def __new__(cls, name, bases, cdict, _p_changed=False):
         cdict = dict([(k, v) for (k, v) in cdict.items()
                       if not k.startswith('_p_')])
         cdict['_p_class_dict'] = {'_p_changed': _p_changed}
-        return super(PersistentMetaClass, self).__new__(
-            self, name, bases, cdict)
+        return super(PersistentMetaClass, cls).__new__(cls, name, bases, cdict)
 
     def __getnewargs__(self):
         return self.__name__, self.__bases__, {}, None

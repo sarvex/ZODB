@@ -99,7 +99,7 @@ class FileStorageTests(
         from ZODB.fsIndex import fsIndex
 
         # Create some data, and remember the index.
-        for i in range(10):
+        for _ in range(10):
             self._dostore()
         oldindex_as_dict = dict(self._storage._index)
 
@@ -143,7 +143,7 @@ class FileStorageTests(
         from BTrees.OOBTree import OOBTree
 
         # Create some data, and remember the index.
-        for i in range(10):
+        for _ in range(10):
             self._dostore()
         data_dict = dict(self._storage._index._data)
 
@@ -163,13 +163,12 @@ class FileStorageTests(
         new_data_dict = dict(self._storage._index._data)
         self.assertEqual(len(data_dict), len(new_data_dict))
 
-        for k in data_dict:
-            old_tree = data_dict[k]
+        for k, old_tree in data_dict.items():
             new_tree = new_data_dict[k]
             self.assertEqual(list(old_tree.items()), list(new_tree.items()))
 
     def check_save_after_load_with_no_index(self):
-        for i in range(10):
+        for _ in range(10):
             self._dostore()
         self._storage.close()
         os.remove('FileStorageTests.fs.index')
@@ -381,8 +380,8 @@ class AnalyzeDotPyTest(StorageTestBase.StorageTestBase):
             __module__ = module_name
         module.Broken = Broken
 
-        oids = [[self._storage.new_oid(), None] for i in range(3)]
-        for i in range(2):
+        oids = [[self._storage.new_oid(), None] for _ in range(3)]
+        for _ in range(2):
             t = transaction.Transaction()
             self._storage.tpc_begin(t)
 
@@ -677,21 +676,26 @@ def test_suite():
         setUp=zope.testing.setupstack.setUpDirectory,
         tearDown=zope.testing.setupstack.tearDown,
         checker=ZODB.tests.util.checker))
-    suite.addTest(ZODB.tests.testblob.storage_reusable_suite(
-        'BlobFileStorage',
-        lambda name, blob_dir:
-        ZODB.FileStorage.FileStorage('%s.fs' % name, blob_dir=blob_dir),
-        test_blob_storage_recovery=True,
-        test_packing=True,
-        ))
-    suite.addTest(ZODB.tests.testblob.storage_reusable_suite(
-        'BlobFileHexStorage',
-        lambda name, blob_dir:
-        ZODB.tests.hexstorage.HexStorage(
-            ZODB.FileStorage.FileStorage('%s.fs' % name, blob_dir=blob_dir)),
-        test_blob_storage_recovery=True,
-        test_packing=True,
-        ))
+    suite.addTest(
+        ZODB.tests.testblob.storage_reusable_suite(
+            'BlobFileStorage',
+            lambda name, blob_dir: ZODB.FileStorage.FileStorage(
+                f'{name}.fs', blob_dir=blob_dir
+            ),
+            test_blob_storage_recovery=True,
+            test_packing=True,
+        )
+    )
+    suite.addTest(
+        ZODB.tests.testblob.storage_reusable_suite(
+            'BlobFileHexStorage',
+            lambda name, blob_dir: ZODB.tests.hexstorage.HexStorage(
+                ZODB.FileStorage.FileStorage(f'{name}.fs', blob_dir=blob_dir)
+            ),
+            test_blob_storage_recovery=True,
+            test_packing=True,
+        )
+    )
     suite.addTest(PackableStorage.IExternalGC_suite(
         lambda : ZODB.FileStorage.FileStorage(
             'data.fs', blob_dir='blobs', pack_gc=False)))

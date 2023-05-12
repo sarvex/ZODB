@@ -64,10 +64,8 @@ class ExportImport:
                     blobfilename = self._storage.loadBlob(oid, serial)
                     f.write(blob_begin_marker)
                     f.write(p64(os.stat(blobfilename).st_size))
-                    blobdata = open(blobfilename, "rb")
-                    cp(blobdata, f)
-                    blobdata.close()
-
+                    with open(blobfilename, "rb") as blobdata:
+                        cp(blobdata, f)
         f.write(export_end_marker)
         return f
 
@@ -95,10 +93,7 @@ class ExportImport:
         self._register()
         t.savepoint(optimistic=True)
         # Return the root imported object.
-        if return_oid_list:
-            return self.get(return_oid_list[0])
-        else:
-            return None
+        return self.get(return_oid_list[0]) if return_oid_list else None
 
     def _importDuringCommit(self, transaction, f, return_oid_list):
         """Import data during two-phase commit.
@@ -166,9 +161,8 @@ class ExportImport:
                 # and remember the name
                 blob_len = u64(f.read(8))
                 blob_filename = mktemp()
-                blob_file = open(blob_filename, "wb")
-                cp(f, blob_file, blob_len)
-                blob_file.close()
+                with open(blob_filename, "wb") as blob_file:
+                    cp(f, blob_file, blob_len)
             else:
                 f.seek(-len(blob_begin_marker),1)
                 blob_filename = None

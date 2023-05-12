@@ -169,7 +169,7 @@ class BasicStorage:
         # of this number
         self._dostore(data=MinPO(22))
         self._dostore(data=MinPO(23))
-        self.assertTrue(len(self._storage) in [0,2])
+        self.assertTrue(len(self._storage) in {0, 2})
 
     def checkGetSize(self):
         self._dostore(data=MinPO(25))
@@ -235,9 +235,6 @@ class BasicStorage:
         except POSException.ReadConflictError as v:
             self.assertTrue(v.oid) == oid
             self.assertTrue(v.serials == (tid2, tid))
-        else:
-            if 0: self.assertTrue(False, "No conflict error")
-
         self._storage.tpc_abort(t)
 
 

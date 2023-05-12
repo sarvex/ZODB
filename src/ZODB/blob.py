@@ -233,7 +233,7 @@ class Blob(persistent.Persistent):
             # If we have uncommitted data, we move it aside for now
             # in case the consumption doesn't work.
             target = self._p_blob_uncommitted
-            target_aside = target+".aside"
+            target_aside = f"{target}.aside"
             os.rename(target, target_aside)
         else:
             target = self._create_uncommitted_file()
@@ -310,7 +310,7 @@ class BlobFile(file):
     # the storage later puts them to avoid copying them ...
 
     def __init__(self, name, mode, blob):
-        super(BlobFile, self).__init__(name, mode+'b')
+        super(BlobFile, self).__init__(name, f'{mode}b')
         self.blob = blob
 
     def close(self):
@@ -320,7 +320,7 @@ class BlobFile(file):
 _pid = str(os.getpid())
 
 def log(msg, level=logging.INFO, subsys=_pid, exc_info=False):
-    message = "(%s) %s" % (subsys, msg)
+    message = f"({subsys}) {msg}"
     logger.log(level, message, exc_info=exc_info)
 
 
@@ -373,8 +373,10 @@ class FilesystemHelper:
 
     def checkSecure(self):
         if not self.isSecure(self.base_dir):
-            log('Blob dir %s has insecure mode setting' % self.base_dir,
-                level=logging.WARNING)
+            log(
+                f'Blob dir {self.base_dir} has insecure mode setting',
+                level=logging.WARNING,
+            )
 
     def getPathForOID(self, oid, create=False):
         """Given an OID, return the path on the filesystem where
@@ -521,19 +523,16 @@ def auto_layout_select(path):
             'Selected `bushy` layout. ' % path)
         layout = 'bushy'
     else:
-        # look for a non-hidden file in the directory
-        has_files = False
-        for name in os.listdir(path):
-            if not name.startswith('.'):
-                has_files = True
-                break
+        has_files = any(not name.startswith('.') for name in os.listdir(path))
         if not has_files:
-            log('Blob directory `%s` is unused and has no layout marker set. '
-                'Selected `bushy` layout. ' % path)
+            log(
+                f'Blob directory `{path}` is unused and has no layout marker set. Selected `bushy` layout. '
+            )
             layout = 'bushy'
         else:
-            log('Blob directory `%s` is used but has no layout marker set. '
-                'Selected `lawn` layout. ' % path)
+            log(
+                f'Blob directory `{path}` is used but has no layout marker set. Selected `lawn` layout. '
+            )
             layout = 'lawn'
     return layout
 
@@ -558,19 +557,16 @@ class BushyLayout(object):
                 hex_segment_bytes = b'0x' + binascii.hexlify(bytes([byte]))
                 hex_segment_string = hex_segment_bytes.decode('ascii')
             else:
-                hex_segment_string = '0x%s' % binascii.hexlify(byte)
+                hex_segment_string = f'0x{binascii.hexlify(byte)}'
             directories.append(hex_segment_string)
 
         return os.path.sep.join(directories)
 
     def path_to_oid(self, path):
         if self.blob_path_pattern.match(path) is None:
-            raise ValueError("Not a valid OID path: `%s`" % path)
+            raise ValueError(f"Not a valid OID path: `{path}`")
         path = [ascii_bytes(x) for x in path.split(os.path.sep)]
-        # Each path segment stores a byte in hex representation. Turn it into
-        # an int and then get the character for our byte string.
-        oid = b''.join(binascii.unhexlify(byte[2:]) for byte in path)
-        return oid
+        return b''.join(binascii.unhexlify(byte[2:]) for byte in path)
 
     def getBlobFilePath(self, oid, tid):
         """Given an oid and a tid, return the full filename of the
@@ -578,7 +574,7 @@ class BushyLayout(object):
 
         """
         oid_path = self.oid_to_path(oid)
-        filename = "%s%s" % (utils.tid_repr(tid), BLOB_SUFFIX)
+        filename = f"{utils.tid_repr(tid)}{BLOB_SUFFIX}"
         return os.path.join(oid_path, filename)
 
 LAYOUTS['bushy'] = BushyLayout()
@@ -601,7 +597,7 @@ class LawnLayout(BushyLayout):
                 raise TypeError()
             return utils.repr_to_oid(path)
         except (TypeError, binascii.Error):
-            raise ValueError('Not a valid OID path: `%s`' % path)
+            raise ValueError(f'Not a valid OID path: `{path}`')
 
 LAYOUTS['lawn'] = LawnLayout()
 
@@ -657,7 +653,7 @@ class BlobStorageMixin(object):
         """
         filename = self.fshelper.getBlobFilename(oid, serial)
         if not os.path.exists(filename):
-            raise POSKeyError("No blob file at %s" % filename, oid, serial)
+            raise POSKeyError(f"No blob file at {filename}", oid, serial)
         return filename
 
     def openCommittedBlobFile(self, oid, serial, blob=None):
@@ -854,7 +850,6 @@ class BlobStorage(BlobStorageMixin):
                     # undo. It would be nice if we had some way to
                     # link to old blobs.
                     orig_fn = self.fshelper.getBlobFilename(oid, serial_id)
-                    new_fn = self.fshelper.getBlobFilename(oid, undo_serial)
                 else:
                     # A previous revision of this blob existed before the
                     # transaction implied by "serial_id".  We copy the blob
@@ -862,7 +857,7 @@ class BlobStorage(BlobStorageMixin):
                     # in case a user wishes to undo this undo.
                     data, serial_before, serial_after = load_result
                     orig_fn = self.fshelper.getBlobFilename(oid, serial_before)
-                    new_fn = self.fshelper.getBlobFilename(oid, undo_serial)
+                new_fn = self.fshelper.getBlobFilename(oid, undo_serial)
                 with open(orig_fn, "rb") as orig:
                     with open(new_fn, "wb") as new:
                         utils.cp(orig, new)
@@ -880,8 +875,7 @@ class BlobStorage(BlobStorageMixin):
         """
         base_dir = self.fshelper.base_dir
         s = self.__storage.new_instance()
-        res = BlobStorage(base_dir, s)
-        return res
+        return BlobStorage(base_dir, s)
 
 copied = logging.getLogger('ZODB.blob.copied').debug
 def rename_or_copy_blob(f1, f2, chmod=True):

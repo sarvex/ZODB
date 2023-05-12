@@ -138,10 +138,8 @@ class DemoStorage(object):
             return self.base.getTid(oid)
 
     def iterator(self, start=None, end=None):
-        for t in self.base.iterator(start, end):
-            yield t
-        for t in self.changes.iterator(start, end):
-            yield t
+        yield from self.base.iterator(start, end)
+        yield from self.changes.iterator(start, end)
 
     def lastTransaction(self):
         t = self.changes.lastTransaction()
@@ -250,8 +248,6 @@ class DemoStorage(object):
         try:
             self.changes.pack(t, referencesf, gc=False)
         except TypeError as v:
-            if 'gc' in str(v):
-                pass # The gc arg isn't supported. Don't pack
             raise
 
     def pop(self):

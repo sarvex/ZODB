@@ -41,7 +41,7 @@ class TestCorruptedFS(ZODB.tests.util.TestCase):
             fstest.check(self._temp)
         except FormatError as msg:
             mo = re.search(rx, str(msg))
-            self.assertFalse(mo is None, "unexpected error: %s" % msg)
+            self.assertFalse(mo is None, f"unexpected error: {msg}")
         else:
             self.fail("fstest did not detect corruption")
 
@@ -56,7 +56,7 @@ class TestCorruptedFS(ZODB.tests.util.TestCase):
         """Copy at most n transactions from the good data"""
         f = self._datafs = StringIO(self.datafs)
         self._file.write(f.read(4))
-        for i in range(n):
+        for _ in range(n):
             tl, data = self.getHeader()
             if not tl:
                 return

@@ -56,8 +56,7 @@ class TransactionalUndoStorage:
         self.__serials = {}
 
     def _transaction_store(self, oid, rev, data, vers, trans):
-        r = self._storage.store(oid, rev, data, vers, trans)
-        if r:
+        if r := self._storage.store(oid, rev, data, vers, trans):
             if isinstance(r, bytes):
                 self.__serials[oid] = r
             else:
@@ -65,8 +64,7 @@ class TransactionalUndoStorage:
                     self.__serials[oid] = serial
 
     def _transaction_vote(self, trans):
-        r = self._storage.tpc_vote(trans)
-        if r:
+        if r := self._storage.tpc_vote(trans):
             for oid, serial in r:
                 self.__serials[oid] = serial
 
@@ -83,7 +81,7 @@ class TransactionalUndoStorage:
             newrevs[oid] = None
         self._transaction_vote(t)
         self._storage.tpc_finish(t)
-        for oid in newrevs.keys():
+        for oid in newrevs:
             newrevs[oid] = self._transaction_newserial(oid)
         return newrevs
 
@@ -94,16 +92,12 @@ class TransactionalUndoStorage:
         if not hasattr(self._storage, "iterator"):
             return
         iter = self._storage.iterator()
-        for txn in iter:
-            for rec in txn:
-                pass
 
     def _begin_undos_vote(self, t, *tids):
         self._storage.tpc_begin(t)
         oids = []
         for tid in tids:
-            undo_result = self._storage.undo(tid, t)
-            if undo_result:
+            if undo_result := self._storage.undo(tid, t):
                 oids.extend(undo_result[1])
         oids.extend(oid for (oid, _) in self._storage.tpc_vote(t) or ())
         return oids
@@ -358,7 +352,7 @@ class TransactionalUndoStorage:
         self._storage.tpc_finish(t)
         eq(len(oids), 1)
         self.assertTrue(oid1 in oids)
-        self.assertTrue(not oid2 in oids)
+        self.assertTrue(oid2 not in oids)
         data, revid1 = self._storage.load(oid1, '')
         eq(zodb_unpickle(data), MinPO(33))
         data, revid2 = self._storage.load(oid2, '')
@@ -648,8 +642,7 @@ class TransactionalUndoStorage:
 
         i = 0
         for tid, oid, revid in orig:
-            self._dostore(oid, revid=revid, data=MinPO(revid),
-                          description="update %s" % i)
+            self._dostore(oid, revid=revid, data=MinPO(revid), description=f"update {i}")
 
         # Undo the OBJECTS transactions that modified objects created
         # in the ith original transaction.

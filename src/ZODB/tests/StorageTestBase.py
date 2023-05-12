@@ -42,10 +42,7 @@ def snooze():
 
 def _persistent_id(obj):
     oid = getattr(obj, "_p_oid", None)
-    if getattr(oid, "__get__", None) is not None:
-        return None
-    else:
-        return oid
+    return None if getattr(oid, "__get__", None) is not None else oid
 
 def zodb_pickle(obj):
     """Create a pickle in the format expected by ZODB."""
@@ -71,7 +68,7 @@ def zodb_pickle(obj):
 
 def persistent_load(pid):
     # helper for zodb_unpickle
-    return "ref to %s.%s oid=%s" % (pid[1][0], pid[1][1], u64(pid[0]))
+    return f"ref to {pid[1][0]}.{pid[1][1]} oid={u64(pid[0])}"
 
 def zodb_unpickle(data):
     """Unpickle an object stored using the format expected by ZODB."""
@@ -79,28 +76,26 @@ def zodb_unpickle(data):
     u = Unpickler(f)
     u.persistent_load = persistent_load
     klass_info = u.load()
-    if isinstance(klass_info, tuple):
-        if isinstance(klass_info[0], type):
-            # Unclear:  what is the second part of klass_info?
-            klass, xxx = klass_info
-            assert not xxx
-        else:
-            if isinstance(klass_info[0], tuple):
-                modname, klassname = klass_info[0]
-            else:
-                modname, klassname = klass_info
-            if modname == "__main__":
-                ns = globals()
-            else:
-                mod = import_helper(modname)
-                ns = mod.__dict__
-            try:
-                klass = ns[klassname]
-            except KeyError:
-                print("can't find %s in %r" % (klassname, ns), file=sys.stderr)
-        inst = klass()
+    if not isinstance(klass_info, tuple):
+        raise ValueError(f"expected class info: {repr(klass_info)}")
+    if isinstance(klass_info[0], type):
+        # Unclear:  what is the second part of klass_info?
+        klass, xxx = klass_info
+        assert not xxx
     else:
-        raise ValueError("expected class info: %s" % repr(klass_info))
+        modname, klassname = (
+            klass_info[0] if isinstance(klass_info[0], tuple) else klass_info
+        )
+        if modname == "__main__":
+            ns = globals()
+        else:
+            mod = import_helper(modname)
+            ns = mod.__dict__
+        try:
+            klass = ns[klassname]
+        except KeyError:
+            print("can't find %s in %r" % (klassname, ns), file=sys.stderr)
+    inst = klass()
     state = u.load()
     inst.__setstate__(state)
     return inst
@@ -122,9 +117,7 @@ def handle_all_serials(oid, *args):
     for arg in args:
         if isinstance(arg, bytes):
             d[oid] = arg
-        elif arg is None:
-            pass
-        else:
+        elif arg is not None:
             for oid, serial in arg:
                 if not isinstance(serial, bytes):
                     raise serial # error from ZEO server

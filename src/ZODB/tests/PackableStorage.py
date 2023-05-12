@@ -81,9 +81,8 @@ class C(Persistent):
 # Fun, huh?
 def dumps(obj):
     def getpersid(obj):
-        if hasattr(obj, 'getoid'):
-            return obj.getoid()
-        return None
+        return obj.getoid() if hasattr(obj, 'getoid') else None
+
     s = BytesIO()
     p = Pickler(s, _protocol)
     if sys.version_info[0] < 3:
@@ -164,9 +163,6 @@ class PackableStorageBase:
         if not ZODB.interfaces.IStorageIteration.providedBy(self._storage):
             return
         it = self._storage.iterator()
-        for txn in it:
-            for data in txn:
-                pass
 
 
 class PackableStorage(PackableStorageBase):
@@ -331,7 +327,7 @@ class PackableStorage(PackableStorageBase):
         transaction.commit()
         db.pack(time.time()+1)
         # some valid storages always return 0 for len()
-        self.assertTrue(len(self._storage) in (0, 1))
+        self.assertTrue(len(self._storage) in {0, 1})
 
     def checkPackAllRevisions(self):
         self._initroot()
@@ -753,11 +749,9 @@ class ClientThread(TestThread):
                 self.root[index].value = MinPO(j)
                 assign_worked = True
                 transaction.commit()
-                alist.append(self.millis())
-                alist.append('OK')
+                alist.extend((self.millis(), 'OK'))
             except ConflictError:
-                alist.append(self.millis())
-                alist.append('Conflict')
+                alist.extend((self.millis(), 'Conflict'))
                 transaction.abort()
             alist.append(assign_worked)
 

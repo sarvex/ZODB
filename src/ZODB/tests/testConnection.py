@@ -1244,7 +1244,7 @@ class StubStorage:
     def new_oid(self):
         oid = str(self._oid)
         self._oid += 1
-        return str(oid).encode()
+        return oid.encode()
 
     def sortKey(self):
         return 'StubStorage sortKey'

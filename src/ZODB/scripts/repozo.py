@@ -122,10 +122,7 @@ class _GzipCloser(object):
 
 
 def usage(code, msg=''):
-    outfp = sys.stderr
-    if code == 0:
-        outfp = sys.stdout
-
+    outfp = sys.stdout if code == 0 else sys.stderr
     print(__doc__ % globals(), file=outfp)
     if msg:
         print(msg, file=outfp)
@@ -215,7 +212,7 @@ def parseargs(argv):
 
     # Any other arguments are invalid
     if args:
-        usage(1, 'Invalid arguments: ' + COMMASPACE.join(args))
+        usage(1, f'Invalid arguments: {COMMASPACE.join(args)}')
 
     # Sanity checks
     if options.mode is None:
@@ -275,10 +272,7 @@ def fsync(afile):
 def dofile(func, fp, n=None):
     bytesread = 0
     while n is None or n > 0:
-        if n is None:
-            todo = READCHUNK
-        else:
-            todo = min(READCHUNK, n)
+        todo = READCHUNK if n is None else min(READCHUNK, n)
         data = fp.read(todo)
         if not data:
             break
@@ -320,22 +314,17 @@ def copyfile(options, dst, start, n):
     # length of bytes.  For robustness, we first write, flush and fsync
     # to a temp file, then rename the temp file at the end.
     sum = md5()
-    ifp = open(options.file, 'rb')
-    ifp.seek(start)
-    tempname = os.path.join(os.path.dirname(dst), 'tmp.tmp')
-    if options.gzip:
-        ofp = gzip.open(tempname, 'wb')
-    else:
-        ofp = open(tempname, 'wb')
+    with open(options.file, 'rb') as ifp:
+        ifp.seek(start)
+        tempname = os.path.join(os.path.dirname(dst), 'tmp.tmp')
+        ofp = gzip.open(tempname, 'wb') if options.gzip else open(tempname, 'wb')
+        def func(data):
+            sum.update(data)
+            ofp.write(data)
 
-    def func(data):
-        sum.update(data)
-        ofp.write(data)
+        ndone = dofile(func, ifp, n)
+        assert ndone == n
 
-    ndone = dofile(func, ifp, n)
-    assert ndone == n
-
-    ifp.close()
     fsync(ofp)
     ofp.close()
     os.rename(tempname, dst)
@@ -351,13 +340,11 @@ def concat(files, ofp=None):
         sum.update(data)
         if ofp:
             ofp.write(data)
+
     bytesread = 0
     for f in files:
         # Auto uncompress
-        if f.endswith('fsz'):
-            ifp = gzip.open(f, 'rb')
-        else:
-            ifp = open(f, 'rb')
+        ifp = gzip.open(f, 'rb') if f.endswith('fsz') else open(f, 'rb')
         bytesread += dofile(func, ifp)
         ifp.close()
     if ofp:
@@ -370,10 +357,7 @@ def gen_filedate(options):
 
 def gen_filename(options, ext=None, now=None):
     if ext is None:
-        if options.full:
-            ext = '.fs'
-        else:
-            ext = '.deltafs'
+        ext = '.fs' if options.full else '.deltafs'
         if options.gzip:
             ext += 'z'
     # Hook for testing
@@ -432,7 +416,7 @@ def find_files(options):
 
 def scandat(repofiles):
     fullfile = repofiles[0]
-    datfile = os.path.splitext(fullfile)[0] + '.dat'
+    datfile = f'{os.path.splitext(fullfile)[0]}.dat'
     fn = startpos = endpos = sum = None # assume .dat file missing or empty
     try:
         fp = open(datfile)
@@ -470,10 +454,10 @@ def delete_old_backups(options):
     recentfull = full.pop(-1)
     deletable.remove(recentfull)
     root, ext = os.path.splitext(recentfull)
-    dat = root + '.dat'
+    dat = f'{root}.dat'
     if dat in deletable:
         deletable.remove(dat)
-    index = root + '.index'
+    index = f'{root}.index'
     if index in deletable:
         deletable.remove(index)
 
@@ -481,11 +465,11 @@ def delete_old_backups(options):
         log('removing old backup file %s (and .dat / .index)', fname)
         root, ext = os.path.splitext(fname)
         try:
-            os.unlink(os.path.join(options.repository, root + '.dat'))
+            os.unlink(os.path.join(options.repository, f'{root}.dat'))
         except OSError:
             pass
         try:
-            os.unlink(os.path.join(options.repository, root + '.index'))
+            os.unlink(os.path.join(options.repository, f'{root}.index'))
         except OSError:
             pass
         os.unlink(os.path.join(options.repository, fname))
@@ -495,7 +479,7 @@ def do_full_backup(options):
     tnow = gen_filedate(options)
     dest = os.path.join(options.repository, gen_filename(options, now=tnow))
     if os.path.exists(dest):
-        raise WouldOverwriteFiles('Cannot overwrite existing file: %s' % dest)
+        raise WouldOverwriteFiles(f'Cannot overwrite existing file: {dest}')
     # Find the file position of the last completed transaction.
     fs = FileStorage(options.file, read_only=True)
     # Note that the FileStorage ctor calls read_index() which scans the file
@@ -513,12 +497,11 @@ def do_full_backup(options):
     log('writing full backup: %s bytes to %s', pos, dest)
     sum = copyfile(options, dest, 0, pos)
     # Write the data file for this full backup
-    datfile = os.path.splitext(dest)[0] + '.dat'
-    fp = open(datfile, 'w')
-    print(dest, 0, pos, sum, file=fp)
-    fp.flush()
-    os.fsync(fp.fileno())
-    fp.close()
+    datfile = f'{os.path.splitext(dest)[0]}.dat'
+    with open(datfile, 'w') as fp:
+        print(dest, 0, pos, sum, file=fp)
+        fp.flush()
+        os.fsync(fp.fileno())
     if options.killold:
         delete_old_backups(options)
 
@@ -528,7 +511,7 @@ def do_incremental_backup(options, reposz, repofiles):
     tnow = gen_filedate(options)
     dest = os.path.join(options.repository, gen_filename(options, now=tnow))
     if os.path.exists(dest):
-        raise WouldOverwriteFiles('Cannot overwrite existing file: %s' % dest)
+        raise WouldOverwriteFiles(f'Cannot overwrite existing file: {dest}')
     # Find the file position of the last completed transaction.
     fs = FileStorage(options.file, read_only=True)
     # Note that the FileStorage ctor calls read_index() which scans the file
@@ -548,13 +531,11 @@ def do_incremental_backup(options, reposz, repofiles):
     # get the .dat file and append the information for this incrementatl to
     # that file.
     fullfile = repofiles[0]
-    datfile = os.path.splitext(fullfile)[0] + '.dat'
-    # This .dat file better exist.  Let the exception percolate if not.
-    fp = open(datfile, 'a')
-    print(dest, reposz, pos, sum, file=fp)
-    fp.flush()
-    os.fsync(fp.fileno())
-    fp.close()
+    datfile = f'{os.path.splitext(fullfile)[0]}.dat'
+    with open(datfile, 'a') as fp:
+        print(dest, reposz, pos, sum, file=fp)
+        fp.flush()
+        os.fsync(fp.fileno())
 
 
 def do_backup(options):
@@ -577,12 +558,9 @@ def do_backup(options):
             log('file shrunk, possibly because of a pack (full backup)')
             do_full_backup(options)
             return
-        # Now check the md5 sum of the source file, from the last
-        # incremental's start and stop positions.
-        srcfp = open(options.file, 'rb')
-        srcfp.seek(startpos)
-        srcsum = checksum(srcfp, endpos-startpos)
-        srcfp.close()
+        with open(options.file, 'rb') as srcfp:
+            srcfp.seek(startpos)
+            srcsum = checksum(srcfp, endpos-startpos)
         log('last incremental file: %s', fn)
         log('last incremental checksum: %s', sum)
         log('source checksum range: [%s..%s], sum: %s',
@@ -603,14 +581,10 @@ def do_backup(options):
         # exist.  This call of concat() will not write an output file.
         reposz, reposum = concat(repofiles)
         log('repository state: %s bytes, md5: %s', reposz, reposum)
-        # Get the md5 checksum of the source file, up to two file positions:
-        # the entire size of the file, and up to the file position of the last
-        # incremental backup.
-        srcfp = open(options.file, 'rb')
-        srcsum = checksum(srcfp, srcsz)
-        srcfp.seek(0)
-        srcsum_backedup = checksum(srcfp, reposz)
-        srcfp.close()
+        with open(options.file, 'rb') as srcfp:
+            srcsum = checksum(srcfp, srcsz)
+            srcfp.seek(0)
+            srcsum_backedup = checksum(srcfp, reposz)
         log('current state   : %s bytes, md5: %s', srcsz, srcsum)
         log('backed up state : %s bytes, md5: %s', reposz, srcsum_backedup)
         # Has nothing changed?
@@ -658,8 +632,8 @@ def do_recover(options):
 
     if options.output is not None:
         last_base = os.path.splitext(repofiles[-1])[0]
-        source_index = '%s.index' % last_base
-        target_index = '%s.index' % options.output
+        source_index = f'{last_base}.index'
+        target_index = f'{options.output}.index'
         if os.path.exists(source_index):
             log('Restoring index file %s to %s', source_index, target_index)
             shutil.copyfile(source_index, target_index)
@@ -672,7 +646,7 @@ def do_verify(options):
     repofiles = find_files(options)
     if not repofiles:
         raise NoFiles('No files in repository')
-    datfile = os.path.splitext(repofiles[0])[0] + '.dat'
+    datfile = f'{os.path.splitext(repofiles[0])[0]}.dat'
     with open(datfile) as fp:
         for line in fp:
             fn, startpos, endpos, sum = line.split()
@@ -703,10 +677,7 @@ def do_verify(options):
 
 def get_checksum_and_size_of_gzipped_file(filename, quick):
     with _GzipCloser(filename, 'rb') as fp:
-        if quick:
-            return None, file_size(fp)
-        else:
-            return checksum_and_size(fp)
+        return (None, file_size(fp)) if quick else checksum_and_size(fp)
 
 
 def get_checksum_and_size_of_file(filename, quick):

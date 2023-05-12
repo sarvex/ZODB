@@ -84,10 +84,7 @@ if sys.version_info[0] < 3:
 
 else:
     def as_bytes(obj):
-        if isinstance(obj, bytes):
-            # invoking str on a bytes object gives its repr()
-            return obj
-        return str(obj).encode("ascii")
+        return obj if isinstance(obj, bytes) else str(obj).encode("ascii")
 
     def as_text(bytes):
         return bytes.decode("ascii")
@@ -136,8 +133,7 @@ def cp(f1, f2, length=None):
         f1.seek(old_pos)
 
     while length > 0:
-        if n > length:
-            n = length
+        n = min(n, length)
         data = read(n)
         if not data:
             break
@@ -153,17 +149,16 @@ def newTid(old):
 
 
 def oid_repr(oid):
-    if isinstance(oid, bytes) and len(oid) == 8:
-        # Convert to hex and strip leading zeroes.
-        as_hex = hexlify(oid).lstrip(b'0')
-        # Ensure two characters per input byte.
-        if len(as_hex) & 1:
-            as_hex = b'0' + as_hex
-        elif as_hex == b'':
-            as_hex = b'00'
-        return '0x' + as_hex.decode()
-    else:
+    if not isinstance(oid, bytes) or len(oid) != 8:
         return repr(oid)
+    # Convert to hex and strip leading zeroes.
+    as_hex = hexlify(oid).lstrip(b'0')
+    # Ensure two characters per input byte.
+    if len(as_hex) & 1:
+        as_hex = b'0' + as_hex
+    elif as_hex == b'':
+        as_hex = b'00'
+    return f'0x{as_hex.decode()}'
 
 def repr_to_oid(repr):
     repr = ascii_bytes(repr)
@@ -182,7 +177,7 @@ tid_repr = serial_repr
 def readable_tid_repr(tid):
     result = tid_repr(tid)
     if isinstance(tid, str) and len(tid) == 8:
-        result = "%s %s" % (result, TimeStamp(tid))
+        result = f"{result} {TimeStamp(tid)}"
     return result
 
 # Addresses can "look negative" on some boxes, some of the time.  If you

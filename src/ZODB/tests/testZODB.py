@@ -102,18 +102,14 @@ class ZODBTests(ZODB.tests.util.TestCase):
                 raise
         else:
             self.assertTrue(not abort_it, 'Did not abort duplication')
-        l1 = list(ob.items())
-        l1.sort()
-        l2 = list(ob2.items())
-        l2.sort()
+        l1 = sorted(ob.items())
+        l2 = sorted(ob2.items())
         l1 = list(map(lambda k_v: (k_v[0], k_v[1][0]), l1))
         l2 = list(map(lambda k_v1: (k_v1[0], k_v1[1][0]), l2))
         self.assertEqual(l1, l2)
         self.assertTrue(ob._p_oid != ob2._p_oid)
         self.assertEqual(ob._p_jar, ob2._p_jar)
-        oids = {}
-        for v in ob.values():
-            oids[v._p_oid] = 1
+        oids = {v._p_oid: 1 for v in ob.values()}
         for v in ob2.values():
             assert v._p_oid not in oids, (
                 'Did not fully separate duplicate from original')
@@ -606,7 +602,7 @@ class PoisonedJar:
         self.break_savepoint = break_savepoint
 
     def sortKey(self):
-        return str(id(self))
+        return id(self)
 
     def tpc_begin(self, *args):
         if self.break_tpc_begin:
@@ -622,7 +618,7 @@ class PoisonedJar:
         if self.break_savepoint:
             raise PoisonedError("savepoint fails")
 
-    def commit(*args):
+    def commit(self):
         pass
 
     def abort(*self):

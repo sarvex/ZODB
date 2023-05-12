@@ -110,7 +110,7 @@ class IConnection(Interface):
             getTransferCounts
     """
 
-    def add(ob):
+    def add(self):
         """Add a new object 'obj' to the database and assign it an oid.
 
         A persistent object is normally added to the database and
@@ -136,7 +136,7 @@ class IConnection(Interface):
         Raises ConnectionStateError if the connection is closed.
         """
 
-    def get(oid):
+    def get(self):
         """Return the persistent object with oid 'oid'.
 
         If the object was not in the cache and the object's class is
@@ -174,7 +174,7 @@ class IConnection(Interface):
         falls under the target size.
         """
 
-    def onCloseCallback(f):
+    def onCloseCallback(self):
         """Register a callable, f, to be called by close().
 
         f will be called with no arguments before the Connection is closed.
@@ -201,7 +201,7 @@ class IConnection(Interface):
     def isReadOnly():
         """Returns True if the storage for this connection is read only."""
 
-    def invalidate(tid, oids):
+    def invalidate(self, oids):
         """Notify the Connection that transaction 'tid' invalidated oids.
 
         When the next transaction boundary is reached, objects will be
@@ -235,7 +235,7 @@ class IConnection(Interface):
         """)
 
     # TODO:  should this accept all the arguments one may pass to DB.open()?
-    def get_connection(database_name):
+    def get_connection(self):
         """Return a Connection for the named database.
 
         This is intended to be called from an open Connection associated with
@@ -269,10 +269,10 @@ class IConnection(Interface):
         Debug information can be added to a connection by using setDebugInfo.
         """
 
-    def setDebugInfo(*items):
+    def setDebugInfo(self):
         """Add the given items to the debug information of this connection."""
 
-    def getTransferCounts(clear=False):
+    def getTransferCounts(self):
         """Returns the number of objects loaded and stored.
 
         If clear is True, reset the counters.
@@ -286,7 +286,7 @@ class IConnection(Interface):
         begins or until the connection os reopned.
         """
 
-    def readCurrent(obj):
+    def readCurrent(self):
         """Make sure an object being read is current
 
         This is used when applications want to ensure a higher level
@@ -336,7 +336,7 @@ class IStorageWrapper(Interface):
         there would be so many that it would be inefficient to do so.
         """
 
-    def invalidate(transaction_id, oids, version=''):
+    def invalidate(self, oids, version=''):
         """Invalidate object ids committed by the given transaction
 
         The oids argument is an iterable of object identifiers.
@@ -346,7 +346,7 @@ class IStorageWrapper(Interface):
 
         """
 
-    def references(record, oids=None):
+    def references(self, oids=None):
         """Scan the given record for object ids
 
         A list of object ids is returned.  If a list is passed in,
@@ -354,11 +354,11 @@ class IStorageWrapper(Interface):
         be created and returned.
         """
 
-    def transform_record_data(data):
+    def transform_record_data(self):
         """Return transformed data
         """
 
-    def untransform_record_data(data):
+    def untransform_record_data(self):
         """Return untransformed data
         """
 
@@ -391,7 +391,7 @@ class IDatabase(IStorageDB):
         """)
 
 
-    def open(transaction_manager=None, serial=''):
+    def open(self, serial=''):
         """Return an IConnection object for use by application code.
 
         transaction_manager: transaction manager to use.  None means
@@ -407,7 +407,7 @@ class IDatabase(IStorageDB):
         """
 
     # TODO: Should this method be moved into some subinterface?
-    def pack(t=None, days=0):
+    def pack(self, days=0):
         """Pack the storage, deleting unused object revisions.
 
         A pack is always performed relative to a particular time, by
@@ -424,7 +424,7 @@ class IDatabase(IStorageDB):
         """
 
     # TODO: Should this method be moved into some subinterface?
-    def undo(id, txn=None):
+    def undo(self, txn=None):
         """Undo a transaction identified by id.
 
         A transaction can be undone if all of the objects involved in
@@ -512,7 +512,7 @@ class IStorage(Interface):
         This is used soley for informational purposes.
         """
 
-    def history(oid, size=1):
+    def history(self, size=1):
         """Return a sequence of history information dictionaries.
 
         Up to size objects (including no objects) may be returned.
@@ -574,7 +574,7 @@ class IStorage(Interface):
         This is used soley for informational purposes.
         """
 
-    def load(oid, version):
+    def load(self, version):
         """Load data for an object id
 
         The version argumement should always be an empty string. It
@@ -588,7 +588,7 @@ class IStorage(Interface):
         A POSKeyError is raised if there is no record for the object id.
         """
 
-    def loadBefore(oid, tid):
+    def loadBefore(self, tid):
         """Load the object data written before a transaction id
 
         If there isn't data before the object before the given
@@ -604,7 +604,7 @@ class IStorage(Interface):
         If the object id isn't in the storage, then POSKeyError is raised.
         """
 
-    def loadSerial(oid, serial):
+    def loadSerial(self, serial):
         """Load the object record for the give transaction id
 
         If a matching data record can be found, it is returned,
@@ -633,7 +633,7 @@ class IStorage(Interface):
         The return value is a string.
         """
 
-    def pack(pack_time, referencesf):
+    def pack(self, referencesf):
         """Pack the storage
 
         It is up to the storage to interpret this call, however, the
@@ -655,7 +655,7 @@ class IStorage(Interface):
         revisions.
         """
 
-    def registerDB(wrapper):
+    def registerDB(self):
         """Register a storage wrapper IStorageWrapper.
 
         The passed object is a wrapper object that provides an upcall
@@ -681,7 +681,7 @@ class IStorage(Interface):
         The result must be a string.
         """
 
-    def store(oid, serial, data, version, transaction):
+    def store(self, serial, data, version, transaction):
         """Store data for the object id, oid.
 
         Arguments:
@@ -741,7 +741,7 @@ class IStorage(Interface):
 
         """
 
-    def tpc_abort(transaction):
+    def tpc_abort(self):
         """Abort the transaction.
 
         Any changes made by the transaction are discarded.
@@ -751,7 +751,7 @@ class IStorage(Interface):
         as the transaction the storage is commiting.
         """
 
-    def tpc_begin(transaction):
+    def tpc_begin(self):
         """Begin the two-phase commit process.
 
         If storage is already participating in a two-phase commit
@@ -762,7 +762,7 @@ class IStorage(Interface):
         current transaction ends (commits or aborts).
         """
 
-    def tpc_finish(transaction, func = lambda tid: None):
+    def tpc_finish(self, func = lambda tid: None):
         """Finish the transaction, making any transaction changes permanent.
 
         Changes must be made permanent at this point.
@@ -778,7 +778,7 @@ class IStorage(Interface):
 
         """
 
-    def tpc_vote(transaction):
+    def tpc_vote(self):
         """Provide a storage with an opportunity to veto a transaction
 
         This call raises a StorageTransactionError if the storage
@@ -814,7 +814,7 @@ class IStorageRestoreable(IStorage):
     storage implementation to another.
     """
 
-    def tpc_begin(transaction, tid=None):
+    def tpc_begin(self, tid=None):
         """Begin the two-phase commit process.
 
         If storage is already participating in a two-phase commit
@@ -839,7 +839,7 @@ class IStorageRestoreable(IStorage):
         #   failed to take into account records after the pack time.
 
 
-    def restore(oid, serial, data, version, prev_txn, transaction):
+    def restore(self, serial, data, version, prev_txn, transaction):
         """Write data already committed in a separate database
 
         The restore method is used when copying data from one database
@@ -906,7 +906,7 @@ class IStorageTransactionInformation(Interface):
 class IStorageIteration(Interface):
     """API for iterating over the contents of a storage."""
 
-    def iterator(start=None, stop=None):
+    def iterator(self, stop=None):
         """Return an IStorageTransactionInformation iterator.
 
         If the start argument is not None, then iteration will start
@@ -931,7 +931,7 @@ class IStorageUndoable(IStorage):
         """Return True, indicating that the storage supports undo.
         """
 
-    def undo(transaction_id, transaction):
+    def undo(self, transaction):
         """Undo the transaction corresponding to the given transaction id.
 
         The transaction id is a value returned from undoInfo or
@@ -946,7 +946,7 @@ class IStorageUndoable(IStorage):
         """
         # Used by DB (Actually, by TransactionalUndo)
 
-    def undoLog(first, last, filter=None):
+    def undoLog(self, last, filter=None):
         """Return a sequence of descriptions for undoable transactions.
 
         Application code should call undoLog() on a DB instance instead of on
@@ -1001,7 +1001,7 @@ class IStorageUndoable(IStorage):
         """
         # DB pass through
 
-    def undoInfo(first=0, last=-20, specification=None):
+    def undoInfo(self, last=-20, specification=None):
         """Return a sequence of descriptions for undoable transactions.
 
         This is like `undoLog()`, except for the `specification` argument.
@@ -1115,7 +1115,7 @@ class IMVCCStorage(IStorage):
         In that case, the ZODB in-memory cache should be cleared.
         """
 
-    def sync(force=True):
+    def sync(self):
         """Updates the internal snapshot to the current state of the database.
 
         If the force parameter is False, the storage may choose to
@@ -1126,7 +1126,7 @@ class IMVCCStorage(IStorage):
 
 class IStorageCurrentRecordIteration(IStorage):
 
-    def record_iternext(next=None):
+    def record_iternext(self):
         """Iterate over the records in a storage
 
         Use like this:
@@ -1142,7 +1142,7 @@ class IStorageCurrentRecordIteration(IStorage):
 
 class IExternalGC(IStorage):
 
-   def deleteObject(oid, serial, transaction):
+   def deleteObject(self, serial, transaction):
        """Mark an object as deleted
 
        This method marks an object as deleted via a new object
@@ -1161,7 +1161,7 @@ class IExternalGC(IStorage):
 
 class ReadVerifyingStorage(IStorage):
 
-    def checkCurrentSerialInTransaction(oid, serial, transaction):
+    def checkCurrentSerialInTransaction(self, serial, transaction):
         """Check whether the given serial number is current.
 
         The method is called during the first phase of 2-phase commit
@@ -1178,7 +1178,7 @@ class ReadVerifyingStorage(IStorage):
 class IBlob(Interface):
     """A BLOB supports efficient handling of large data within ZODB."""
 
-    def open(mode):
+    def open(self):
         """Open a blob
 
         Returns a file(-like) object for handling the blob data.
@@ -1203,7 +1203,7 @@ class IBlob(Interface):
         A BlobError will be raised if the blob has any uncommitted data.
         """
 
-    def consumeFile(filename):
+    def consumeFile(self):
         """Consume a file.
 
         Replace the current data of the blob with the file given under
@@ -1221,7 +1221,7 @@ class IBlob(Interface):
 class IBlobStorage(Interface):
     """A storage supporting BLOBs."""
 
-    def storeBlob(oid, oldserial, data, blobfilename, version, transaction):
+    def storeBlob(self, oldserial, data, blobfilename, version, transaction):
         """Stores data that has a BLOB attached.
 
         The blobfilename argument names a file containing blob data.
@@ -1264,7 +1264,7 @@ class IBlobStorage(Interface):
 
         """
 
-    def loadBlob(oid, serial):
+    def loadBlob(self, serial):
         """Return the filename of the Blob data for this OID and serial.
 
         Returns a filename.
@@ -1272,7 +1272,7 @@ class IBlobStorage(Interface):
         Raises POSKeyError if the blobfile cannot be found.
         """
 
-    def openCommittedBlobFile(oid, serial, blob=None):
+    def openCommittedBlobFile(self, serial, blob=None):
         """Return a file for committed data for the given object id and serial
 
         If a blob is provided, then a BlobFile object is returned,
@@ -1292,7 +1292,7 @@ class IBlobStorage(Interface):
 
 class IBlobStorageRestoreable(IBlobStorage, IStorageRestoreable):
 
-    def restoreBlob(oid, serial, data, blobfilename, prev_txn, transaction):
+    def restoreBlob(self, serial, data, blobfilename, prev_txn, transaction):
         """Write blob data already committed in a separate database
 
         See the restore and storeBlob methods.
@@ -1315,7 +1315,7 @@ class IBroken(Interface):
 
     """
 
-    def __setattr__(name, value):
+    def __setattr__(self, value):
         """You cannot modify broken objects. This will raise a
         ZODB.broken.BrokenModified exception.
         """

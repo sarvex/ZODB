@@ -62,15 +62,9 @@ def fsdump(path, file=None, with_offset=1):
             else:
                 modname, classname = get_pickle_metadata(rec.data)
                 size = " size=%d" % len(rec.data)
-                fullclass = "%s.%s" % (modname, classname)
+                fullclass = f"{modname}.{classname}"
 
-            if rec.data_txn:
-                # It would be nice to print the transaction number
-                # (i) but it would be expensive to keep track of.
-                bp = " bp=%016x" % u64(rec.data_txn)
-            else:
-                bp = ""
-
+            bp = " bp=%016x" % u64(rec.data_txn) if rec.data_txn else ""
             print(("  data #%05d oid=%016x%s class=%s%s" %
                   (j, u64(rec.oid), size, fullclass, bp)), file=file)
     iter.close()
@@ -105,7 +99,7 @@ class Dumper:
         print("=" * 60, file=self.dest)
         print("offset: %d" % pos, file=self.dest)
         print("end pos: %d" % end, file=self.dest)
-        print("transaction id: %s" % fmt(tid), file=self.dest)
+        print(f"transaction id: {fmt(tid)}", file=self.dest)
         print("trec len: %d" % tlen, file=self.dest)
         print("status: %r" % status, file=self.dest)
         user = descr = extra = ""
@@ -131,8 +125,8 @@ class Dumper:
         oid, revid, prev, tloc, vlen, dlen = struct.unpack(DATA_HDR, h)
         print("-" * 60, file=self.dest)
         print("offset: %d" % pos, file=self.dest)
-        print("oid: %s" % fmt(oid), file=self.dest)
-        print("revid: %s" % fmt(revid), file=self.dest)
+        print(f"oid: {fmt(oid)}", file=self.dest)
+        print(f"revid: {fmt(revid)}", file=self.dest)
         print("previous record offset: %d" % prev, file=self.dest)
         print("transaction offset: %d" % tloc, file=self.dest)
         assert not vlen

@@ -41,8 +41,9 @@ def migrate(source, dest, layout):
     source_fsh.create()
     dest_fsh = FilesystemHelper(dest, layout)
     dest_fsh.create()
-    print("Migrating blob data from `%s` (%s) to `%s` (%s)" % (
-        source, source_fsh.layout_name, dest, dest_fsh.layout_name))
+    print(
+        f"Migrating blob data from `{source}` ({source_fsh.layout_name}) to `{dest}` ({dest_fsh.layout_name})"
+    )
     for oid, path in source_fsh.listOIDs():
         dest_path = dest_fsh.getPathForOID(oid, create=True)
         files = os.listdir(path)
@@ -67,7 +68,7 @@ def main(source=None, dest=None, layout="bushy"):
                       "(bushy or lawn). Default: %default")
     options, args = parser.parse_args()
 
-    if not len(args) == 2:
+    if len(args) != 2:
         parser.error("source and destination must be given")
 
     logging.getLogger().addHandler(logging.StreamHandler())

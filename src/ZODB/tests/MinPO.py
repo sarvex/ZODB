@@ -47,4 +47,4 @@ class MinPO(Persistent):
         return self.value >= aMinPO.value
 
     def __repr__(self):
-        return "MinPO(%s)" % self.value
+        return f"MinPO({self.value})"

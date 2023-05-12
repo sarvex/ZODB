@@ -147,8 +147,7 @@ class DataManager(object):
         self.state += self.delta
 
     def _checkTransaction(self, transaction):
-        if (transaction is not self.transaction
-            and self.transaction is not None):
+        if transaction is not self.transaction is not None:
             raise TypeError("Transaction missmatch",
                             transaction, self.transaction)
 

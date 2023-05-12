@@ -93,7 +93,7 @@ class DBMethods(CacheTestBase):
 
     def setUp(self):
         CacheTestBase.setUp(self)
-        for i in range(4):
+        for _ in range(4):
             self.noodle_new_connection()
 
     def testCacheDetail(self):
@@ -114,13 +114,13 @@ class DBMethods(CacheTestBase):
         old_size = self.db.cacheSize()
         self.db.cacheFullSweep()
         new_size = self.db.cacheSize()
-        self.assertTrue(new_size < old_size, "%s < %s" % (old_size, new_size))
+        self.assertTrue(new_size < old_size, f"{old_size} < {new_size}")
 
     def testMinimize(self):
         old_size = self.db.cacheSize()
         self.db.cacheMinimize()
         new_size = self.db.cacheSize()
-        self.assertTrue(new_size < old_size, "%s < %s" % (old_size, new_size))
+        self.assertTrue(new_size < old_size, f"{old_size} < {new_size}")
 
     def testMinimizeTerminates(self):
         # This is tricky.  cPickleCache had a case where it could get into
@@ -237,7 +237,7 @@ class LRUCacheTests(CacheTestBase):
         self.db.setCacheSize(CACHE_SIZE)
 
         CONNS = 3
-        for i in range(CONNS):
+        for _ in range(CONNS):
             self.noodle_new_connection()
 
         self.assertEqual(self.db.cacheSize(), CACHE_SIZE * CONNS)
@@ -258,7 +258,7 @@ class LRUCacheTests(CacheTestBase):
         self.db.setCacheSize(CACHE_SIZE)
 
         CONNS = 3
-        for i in range(CONNS):
+        for _ in range(CONNS):
             self.noodle_new_connection()
 
         gc.collect()

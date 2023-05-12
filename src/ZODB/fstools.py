@@ -84,9 +84,7 @@ class TxnHeader:
         off = self._pos + self.length + 8
         self._file.seek(off)
         s = self._file.read(8)
-        if not s:
-            return None
-        return TxnHeader(self._file, off)
+        return None if not s else TxnHeader(self._file, off)
 
     def prev_txn(self):
         if self._pos == 4:

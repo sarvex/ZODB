@@ -54,22 +54,25 @@ def main(args):
     minimize=0
     detailed=1
     for o, v in opts:
-        if o=='-n': nrep=string.atoi(v)
-        elif o=='-d': data=v
-        elif o=='-s': s=v
-        elif o=='-z':
-            global zlib
-            import zlib
-            z=compress
-        elif o=='-L':
-            minimize=1
-        elif o=='-M':
-            detailed=0
-        elif o=='-D':
+        if o == '-D':
             global debug
             os.environ['STUPID_LOG_FILE']=''
             os.environ['STUPID_LOG_SEVERITY']='-999'
 
+        elif o == '-L':
+            minimize=1
+        elif o == '-M':
+            detailed=0
+        elif o == '-d':
+            data=v
+        elif o == '-n':
+            if o=='-n': nrep=string.atoi(v)
+        elif o == '-s':
+            s=v
+        elif o == '-z':
+            global zlib
+            import zlib
+            z=compress
     if s:
         s=__import__(s, globals(), globals(), ('__doc__',))
         s=s.Storage
@@ -90,12 +93,11 @@ def main(args):
             jar=db.open()
             transaction.begin()
             rt=jar.root()
-            key='s%s' % r
+            key = f's{r}'
             if key in rt: p=rt[key]
             else: rt[key]=p=P()
             for i in range(r):
-                if z is not None: d=z(data)
-                else: d=data
+                d = z(data) if z is not None else data
                 v=getattr(p, str(i), P())
                 v.d=d
                 setattr(p,str(i),v)

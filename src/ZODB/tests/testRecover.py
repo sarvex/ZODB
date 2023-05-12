@@ -69,7 +69,7 @@ class RecoverTest(ZODB.tests.util.TestCase):
     def damage(self, num, size):
         self.storage.close()
         # Drop size null bytes into num random spots.
-        for i in range(num):
+        for _ in range(num):
             offset = random.randint(0, self.storage._pos - size)
             with open(self.path, "a+b") as f:
                 f.seek(offset)
@@ -115,7 +115,7 @@ class RecoverTest(ZODB.tests.util.TestCase):
                          "recovery changed a non-damaged .fs file")
 
     def testOneBlock(self):
-        for i in range(self.ITERATIONS):
+        for _ in range(self.ITERATIONS):
             self.damage(1, 1024)
             output = self.recover()
             self.assertTrue('error' in output, output)
@@ -125,7 +125,7 @@ class RecoverTest(ZODB.tests.util.TestCase):
             os.rename(self.dest, self.path)
 
     def testFourBlocks(self):
-        for i in range(self.ITERATIONS):
+        for _ in range(self.ITERATIONS):
             self.damage(4, 512)
             output = self.recover()
             self.assertTrue('error' in output, output)
@@ -135,7 +135,7 @@ class RecoverTest(ZODB.tests.util.TestCase):
             os.rename(self.dest, self.path)
 
     def testBigBlock(self):
-        for i in range(self.ITERATIONS):
+        for _ in range(self.ITERATIONS):
             self.damage(1, 32 * 1024)
             output = self.recover()
             self.assertTrue('error' in output, output)

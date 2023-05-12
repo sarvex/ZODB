@@ -103,10 +103,7 @@ class BaseStorage(UndoLogCompatible):
         # increments it by 1, and returns the result.  It's really a
         # 64-bit integer stored as an 8-byte big-endian string.
         oid = getattr(base, '_oid', None)
-        if oid is None:
-            self._oid = z64
-        else:
-            self._oid = oid
+        self._oid = z64 if oid is None else oid
 
     ########################################################################
     # The following methods are normally overridden on instances,
@@ -234,11 +231,7 @@ class BaseStorage(UndoLogCompatible):
             user = transaction.user
             desc = transaction.description
             ext = transaction._extension
-            if ext:
-                ext = dumps(ext, _protocol)
-            else:
-                ext = ""
-
+            ext = dumps(ext, _protocol) if ext else ""
             self._ude = user, desc, ext
 
             if tid is None:
@@ -375,14 +368,15 @@ def copy(source, dest, verbose=0):
         else:
             t = TimeStamp(tid)
             if t <= _ts:
-                if ok: print(('Time stamps out of order %s, %s' % (_ts, t)))
+                if ok:
+                    print(f'Time stamps out of order {_ts}, {t}')
                 ok = 0
                 _ts = t.laterThan(_ts)
                 tid = _ts.raw()
             else:
                 _ts = t
                 if not ok:
-                    print(('Time stamps back in order %s' % (t)))
+                    print(f'Time stamps back in order {_ts}')
                     ok = 1
 
         if verbose:

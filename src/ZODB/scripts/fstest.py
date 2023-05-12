@@ -62,7 +62,7 @@ def hexify(s):
         '0x00ffaacc'
 
     """
-    return '0x' + binascii.hexlify(s).decode()
+    return f'0x{binascii.hexlify(s).decode()}'
 
 def chatter(msg, level=1):
     if VERBOSE >= level:
@@ -71,10 +71,7 @@ def chatter(msg, level=1):
 def U64(v):
     """Unpack an 8-byte string as a 64-bit long"""
     h, l = struct.unpack(">II", v)
-    if h:
-        return (h << 32) + l
-    else:
-        return l
+    return (h << 32) + l if h else l
 
 def check(path):
     with open(path, 'rb') as file:
@@ -110,14 +107,15 @@ def check_trec(path, file, pos, ltid, file_size):
     if not h:
         return None, None
     if len(h) != TREC_HDR_LEN:
-        raise FormatError("%s truncated at %s" % (path, pos))
+        raise FormatError(f"{path} truncated at {pos}")
 
     tid, stl, status, ul, dl, el = struct.unpack(">8s8scHHH", h)
     tmeta_len = TREC_HDR_LEN + ul + dl + el
 
     if tid <= ltid:
-        raise FormatError("%s time-stamp reduction at %s: %s <= %s" %
-                          (path, pos, hexify(tid), hexify(ltid)))
+        raise FormatError(
+            f"{path} time-stamp reduction at {pos}: {hexify(tid)} <= {hexify(ltid)}"
+        )
     ltid = tid
 
     tl = U64(stl) # transaction record length - 8
@@ -125,11 +123,9 @@ def check_trec(path, file, pos, ltid, file_size):
         raise FormatError("%s truncated possibly because of"
                           " damaged records at %s" % (path, pos))
     if status == Status.checkpoint:
-        raise FormatError("%s checkpoint flag was not cleared at %s"
-                          % (path, pos))
+        raise FormatError(f"{path} checkpoint flag was not cleared at {pos}")
     if status not in b' up':
-        raise FormatError("%s has invalid status '%s' at %s" %
-                          (path, status, pos))
+        raise FormatError(f"{path} has invalid status '{status}' at {pos}")
 
     if tmeta_len > tl:
         raise FormatError("%s has an invalid transaction header"
@@ -167,7 +163,7 @@ def check_drec(path, file, pos, tpos, tid):
 
     h = file.read(DREC_HDR_LEN)
     if len(h) != DREC_HDR_LEN:
-        raise FormatError("%s truncated at %s" % (path, pos))
+        raise FormatError(f"{path} truncated at {pos}")
     oid, serial, _prev, _tloc, vlen, _plen = (
         struct.unpack(">8s8s8s8sH8s", h))
     prev = U64(_prev)

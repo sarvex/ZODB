@@ -25,8 +25,8 @@ class RecalcitrantObject(Persistent):
     def _p_deactivate(self):
         self.__class__.deactivations += 1
 
-    def init(cls):
-        cls.deactivations = 0
+    def init(self):
+        self.deactivations = 0
 
     init = classmethod(init)
 
@@ -43,9 +43,9 @@ class RegularObject(Persistent):
         self.__class__.invalidations += 1
         super(RegularObject, self)._p_invalidate()
 
-    def init(cls):
-        cls.deactivations = 0
-        cls.invalidations = 0
+    def init(self):
+        self.deactivations = 0
+        self.invalidations = 0
 
     init = classmethod(init)
 

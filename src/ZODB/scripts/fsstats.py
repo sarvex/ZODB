@@ -25,7 +25,7 @@ class Histogram(dict):
         return sum(six.itervalues(self))
 
     def mean(self):
-        product = sum([k * v for k, v in six.iteritems(self)])
+        product = sum(k * v for k, v in six.iteritems(self))
         return product / self.size()
 
     def median(self):
@@ -96,7 +96,7 @@ def class_detail(class_size):
     fmt = "%5s %6s %6s %6s   %-50.50s"
     labels = ["num", "median", "mean", "mode", "class"]
     print(fmt % tuple(labels))
-    print(fmt % tuple(["-" * len(s) for s in labels]))
+    print(fmt % tuple("-" * len(s) for s in labels))
     for klass, h in sort_byhsize(six.iteritems(class_size)):
         print(fmt % (h.size(), h.median(), h.mean(), h.mode(), klass))
     print()
@@ -106,7 +106,7 @@ def class_detail(class_size):
         h.make_bins(50)
         if len(filter(None, h.bins)) == 1:
             continue
-        h.report("Object size for %s" % klass, usebins=True)
+        h.report(f"Object size for {klass}", usebins=True)
 
 def revision_detail(lifetimes, classes):
     # Report per-class details for any object modified more than once
@@ -120,7 +120,7 @@ def revision_detail(lifetimes, classes):
             if n > 1:
                 keep = True
         if keep:
-            h.report("Number of revisions for %s" % name, binsize=10)
+            h.report(f"Number of revisions for {name}", binsize=10)
 
 def main(path=None):
     if path is None:
@@ -138,48 +138,46 @@ def main(path=None):
     objects = 0
     tid = None
 
-    f = open(path, "rb")
-    for i, line in enumerate(f):
-        if MAX and i > MAX:
-            break
-        if line.startswith("  data"):
-            m = rx_data.search(line)
-            if not m:
-                continue
-            oid, klass, size = m.groups()
-            size = int(size)
+    with open(path, "rb") as f:
+        for i, line in enumerate(f):
+            if MAX and i > MAX:
+                break
+            if line.startswith("  data"):
+                m = rx_data.search(line)
+                if not m:
+                    continue
+                oid, klass, size = m.groups()
+                size = int(size)
 
-            obj_size.add(size)
-            n_updates.add(oid)
-            n_classes.add(klass)
+                obj_size.add(size)
+                n_updates.add(oid)
+                n_classes.add(klass)
 
-            h = class_size.get(klass)
-            if h is None:
-                h = class_size[klass] = Histogram()
-            h.add(size)
+                h = class_size.get(klass)
+                if h is None:
+                    h = class_size[klass] = Histogram()
+                h.add(size)
 
-            L = lifetimes.setdefault(oid, [])
-            L.append(tid)
+                L = lifetimes.setdefault(oid, [])
+                L.append(tid)
 
-            L = classes.setdefault(klass, [])
-            L.append(oid)
-            objects += 1
+                L = classes.setdefault(klass, [])
+                L.append(oid)
+                objects += 1
 
-        elif line.startswith("Trans"):
+            elif line.startswith("Trans"):
 
-            if tid is not None:
-                txn_objects.add(objects)
+                if tid is not None:
+                    txn_objects.add(objects)
 
-            m = rx_txn.search(line)
-            if not m:
-                continue
-            tid, size = m.groups()
-            size = int(size)
-            objects = 0
+                m = rx_txn.search(line)
+                if not m:
+                    continue
+                tid, size = m.groups()
+                size = int(size)
+                objects = 0
 
-            txn_bytes.add(size)
-    f.close()
-
+                txn_bytes.add(size)
     print("Summary: %d txns, %d objects, %d revisions" % (
         txn_objects.size(), len(n_updates), n_updates.size()))
     print()
@@ -190,7 +188,7 @@ def main(path=None):
 
     # object lifetime info
     h = Histogram()
-    for k, v in lifetimes.items():
+    for v in lifetimes.values():
         h.add(len(v))
     h.report("Number of revisions", binsize=10, skip=False)
 

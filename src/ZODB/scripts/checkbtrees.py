@@ -31,14 +31,11 @@ def add_if_new_persistent(L, obj, path):
 
 def get_subobjects(obj):
     getattr(obj, '_', None) # unghostify
-    sub = []
     try:
         attrs = obj.__dict__.items()
     except AttributeError:
         attrs = ()
-    for pair in attrs:
-        sub.append(pair)
-
+    sub = list(attrs)
     # what if it is a mapping?
     try:
         items = obj.items()
@@ -48,7 +45,7 @@ def get_subobjects(obj):
         if not isinstance(k, int):
             sub.append(("<key>", k))
         if not isinstance(v, int):
-            sub.append(("[%s]" % repr(k), v))
+            sub.append((f"[{repr(k)}]", v))
 
     # what if it is a sequence?
     i = 0
@@ -70,7 +67,7 @@ def main(fname=None):
         except:
             print(__doc__)
             sys.exit(2)
-        
+
     fs = FileStorage(fname, read_only=1)
     cn = ZODB.DB(fs).open()
     rt = cn.root()
@@ -87,31 +84,26 @@ def main(fname=None):
             print(path, repr(obj))
 
         mod = str(obj.__class__.__module__)
-        if mod.startswith("BTrees"):
-            if hasattr(obj, "_check"):
-                try:
-                    obj._check()
-                except AssertionError as msg:
-                    print("*" * 60)
-                    print(msg)
-                    print("*" * 60)
+        if mod.startswith("BTrees") and hasattr(obj, "_check"):
+            try:
+                obj._check()
+            except AssertionError as msg:
+                print("*" * 60)
+                print(msg)
+                print("*" * 60)
 
-                try:
-                    check(obj)
-                except AssertionError as msg:
-                    print("*" * 60)
-                    print(msg)
-                    print("*" * 60)
+            try:
+                check(obj)
+            except AssertionError as msg:
+                print("*" * 60)
+                print(msg)
+                print("*" * 60)
 
         if found % 100 == 0:
             cn.cacheMinimize()
 
         for k, v in get_subobjects(obj):
-            if k.startswith('['):
-                # getitem
-                newpath = "%s%s" % (path, k)
-            else:
-                newpath = "%s.%s" % (path, k)
+            newpath = f"{path}{k}" if k.startswith('[') else f"{path}.{k}"
             add_if_new_persistent(todo, v, newpath)
 
     print("total", len(fs._index), "found", found)

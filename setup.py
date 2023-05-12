@@ -65,7 +65,7 @@ def _modname(path, base, name=''):
     if path == base:
         return name
     dirname, basename = os.path.split(path)
-    return _modname(dirname, base, basename + '.' + name)
+    return _modname(dirname, base, f'{basename}.{name}')
 
 def _flatten(suite, predicate=lambda *x: True):
     from unittest import TestCase
@@ -74,8 +74,7 @@ def _flatten(suite, predicate=lambda *x: True):
             if isinstance(suite_or_case, TestCase):
                 yield suite_or_case
             else:
-                for x in _flatten(suite_or_case):
-                    yield x
+                yield from _flatten(suite_or_case)
 
 def _no_layer(suite_or_case):
     return getattr(suite_or_case, 'layer', None) is None

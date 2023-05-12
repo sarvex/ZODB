@@ -88,7 +88,7 @@ class fsIndex(object):
 
     def __setstate__(self, state):
         version = state.pop('state_version', 0)
-        getattr(self, '_setstate_%s' % version)(state)
+        getattr(self, f'_setstate_{version}')(state)
 
     def _setstate_0(self, state):
         self.__dict__.clear()
@@ -118,7 +118,7 @@ class fsIndex(object):
             pickler.dump(None)
 
     @classmethod
-    def load(class_, fname):
+    def load(cls, fname):
         with open(fname, 'rb') as f:
             unpickler = Unpickler(f)
             pos = unpickler.load()
@@ -128,7 +128,7 @@ class fsIndex(object):
                 # will pipe the result to fsIndex().update() to normalize
                 # the keys
                 return pos                  # Old format
-            index = class_()
+            index = cls()
             data = index._data
             while 1:
                 v = unpickler.load()
@@ -144,9 +144,7 @@ class fsIndex(object):
         if tree is default:
             return default
         v = tree.get(key[6:], default)
-        if v is default:
-            return default
-        return str2num(v)
+        return default if v is default else str2num(v)
 
     def __setitem__(self, key, value):
         assert isinstance(key, bytes)
@@ -169,10 +167,7 @@ class fsIndex(object):
             del self._data[treekey]
 
     def __len__(self):
-        r = 0
-        for tree in six.itervalues(self._data):
-            r += len(tree)
-        return r
+        return sum(len(tree) for tree in six.itervalues(self._data))
 
     def update(self, mapping):
         for k, v in mapping.items():
@@ -188,9 +183,7 @@ class fsIndex(object):
         if tree is None:
             return False
         v = tree.get(key[6:], None)
-        if v is None:
-            return False
-        return True
+        return v is not None
 
     def clear(self):
         self._data.clear()

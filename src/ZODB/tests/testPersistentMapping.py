@@ -126,7 +126,7 @@ class PMTests(unittest.TestCase):
         self.assertEqual(keys, ['a', 'b', 'name', 'x'])
 
         values = set(m.values())
-        self.assertEqual(values, set([1, 2, 3, 'bob']))
+        self.assertEqual(values, {1, 2, 3, 'bob'})
 
         items = sorted(m.items())
         self.assertEqual(items,
@@ -155,7 +155,7 @@ class PMTests(unittest.TestCase):
             self.assertEqual(keylist, ['a', 'b', 'name', 'x'])
 
         check(list(m))
-        check([key for key in m])
+        check(list(m))
 
         i = iter(m)
         keylist = []

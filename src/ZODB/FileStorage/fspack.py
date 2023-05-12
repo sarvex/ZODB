@@ -58,9 +58,8 @@ class PackCopier(FileStorageFormatter):
             _tid = h[:8]
             if _tid == tid:
                 return pos
-            if stop_at_pack:
-                if h[16] == 'p':
-                    break
+            if stop_at_pack and h[16] == 'p':
+                break
         raise PackError("Invalid backpointer transaction id")
 
     def _data_find(self, tpos, oid, data):
@@ -94,9 +93,7 @@ class PackCopier(FileStorageFormatter):
                                  pos)
                     return 0
                 _data = self._file.read(h.plen)
-                if data != _data:
-                    return 0
-                return pos
+                return 0 if data != _data else pos
             pos += h.recordlen()
         return 0
 
@@ -110,10 +107,7 @@ class PackCopier(FileStorageFormatter):
         if prev_pos:
             # If there is a valid prev_pos, don't write data.
             data = None
-        if data is None:
-            dlen = 0
-        else:
-            dlen = len(data)
+        dlen = 0 if data is None else len(data)
         # Write the recovery data record
         h = DataHeader(oid, serial, old, txnpos, 0, dlen)
 
@@ -137,8 +131,7 @@ class PackCopier(FileStorageFormatter):
         try:
             prev_pos = 0
             if prev_txn is not None:
-                prev_txn_pos = self._txn_find(prev_txn, 0)
-                if prev_txn_pos:
+                if prev_txn_pos := self._txn_find(prev_txn, 0):
                     prev_pos = self._data_find(prev_txn_pos, oid, data)
             return prev_pos
         finally:
@@ -181,9 +174,7 @@ class GC(FileStorageFormatter):
         rpos = self.reachable.get(oid)
         if rpos is None:
             return 0
-        if rpos == pos:
-            return 1
-        return pos in self.reach_ex.get(oid, [])
+        return 1 if rpos == pos else pos in self.reach_ex.get(oid, [])
 
     def findReachable(self):
         self.buildPackIndex()
@@ -221,9 +212,8 @@ class GC(FileStorageFormatter):
                 self.checkData(th, tpos, dh, pos)
                 if dh.plen or dh.back:
                     self.oid2curpos[dh.oid] = pos
-                else:
-                    if dh.oid in self.oid2curpos:
-                        del self.oid2curpos[dh.oid]
+                elif dh.oid in self.oid2curpos:
+                    del self.oid2curpos[dh.oid]
                 pos += dh.recordlen()
 
             tlen = self._read_num(pos)
@@ -273,9 +263,7 @@ class GC(FileStorageFormatter):
                 raise
 
             reachable[oid] = pos
-            for oid in self.findrefs(pos):
-                if oid not in reachable:
-                    todo.append(oid)
+            todo.extend(oid for oid in self.findrefs(pos) if oid not in reachable)
 
     def findReachableFromFuture(self):
         # In this pass, the roots are positions of object revisions.
@@ -325,10 +313,7 @@ class GC(FileStorageFormatter):
         # Chase backpointers until we get to the record with the refs
         while dh.back:
             dh = self._read_data_header(dh.back)
-        if dh.plen:
-            return self.referencesf(self._file.read(dh.plen))
-        else:
-            return []
+        return self.referencesf(self._file.read(dh.plen)) if dh.plen else []
 
 class FileStoragePacker(FileStorageFormatter):
 
@@ -409,7 +394,7 @@ class FileStoragePacker(FileStorageFormatter):
 
         # Setup the destination file and copy the metadata.
         # TODO:  rename from _tfile to something clearer.
-        self._tfile = open(self._name + ".pack", "w+b")
+        self._tfile = open(f"{self._name}.pack", "w+b")
         self._file.seek(0)
         self._tfile.write(self._file.read(self._metadata_size))
 
@@ -421,7 +406,7 @@ class FileStoragePacker(FileStorageFormatter):
             # pack didn't free any data.  there's no point in continuing.
             self._tfile.close()
             self._file.close()
-            os.remove(self._name + ".pack")
+            os.remove(f"{self._name}.pack")
             if self.blob_removed is not None:
                 self.blob_removed.close()
             return None

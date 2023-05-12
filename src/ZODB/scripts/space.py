@@ -23,7 +23,7 @@ def run(path, v=0):
     for oid in iter:
         data, serialno = fs.load(oid, '')
         mod, klass = get_pickle_metadata(data)
-        key = "%s.%s" % (mod, klass)
+        key = f"{mod}.{klass}"
         bytes, count = totals.get(key, (0, 0))
         bytes += len(data)
         count += 1
@@ -49,10 +49,7 @@ def main():
     if len(args) != 1:
         print("usage: space.py [-v] Data.fs")
         sys.exit(2)
-    v = 0
-    for o, a in opts:
-        if o == "-v":
-            v += 1
+    v = sum(1 for o, a in opts if o == "-v")
     path = args[0]
     run(path, v)
 

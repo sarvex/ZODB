@@ -247,17 +247,14 @@ def doit(srcdb, dstdb, options):
             t = TimeStamp(tid)
             if t <= ts:
                 if ok:
-                    print((
-                        'Time stamps are out of order %s, %s' % (ts, t)), file=sys.stderr)
+                    print(f'Time stamps are out of order {ts}, {t}', file=sys.stderr)
                     ok = False
                     ts = t.laterThan(ts)
                     tid = ts.raw()
                 else:
                     ts = t
-                    if not ok:
-                        print((
-                            'Time stamps are back in order %s' % t), file=sys.stderr)
-                        ok = True
+                    print(f'Time stamps are back in order {ts}', file=sys.stderr)
+                    ok = True
         if verbose > 1:
             print(ts)
 
@@ -278,10 +275,7 @@ def doit(srcdb, dstdb, options):
             if thissize > largest_pickle:
                 largest_pickle = thissize
             if verbose > 1:
-                if not r.version:
-                    vstr = 'norev'
-                else:
-                    vstr = r.version
+                vstr = 'norev' if not r.version else r.version
                 print(utils.U64(oid), vstr, len(r.data))
             oldrevid = prevrevids.get(oid, ZERO)
             result = dstdb.store(oid, oldrevid, r.data, r.version, txn)
@@ -290,7 +284,7 @@ def doit(srcdb, dstdb, options):
         result = dstdb.tpc_vote(txn)
         t3 = time.time()
         newrevids.tpc_vote(result)
-        prevrevids.update(newrevids.get_dict())
+        prevrevids |= newrevids.get_dict()
         # Profile every 100 transactions
         if prof:
             prof.runcall(dstdb.tpc_finish, txn)
@@ -316,9 +310,8 @@ def doit(srcdb, dstdb, options):
 
         if prof:
             prof.create_stats()
-            fp = open('profile-%02d.txt' % (counter / 100), 'wb')
-            marshal.dump(prof.stats, fp)
-            fp.close()
+            with open('profile-%02d.txt' % (counter / 100), 'wb') as fp:
+                marshal.dump(prof.stats, fp)
     print("Largest pickle:          %8d" % largest_pickle, file=outfp)
     print("Largest transaction:     %8d" % largest_txn_in_size, file=outfp)
     print("Largest object count:    %8d" % largest_txn_in_objects, file=outfp)

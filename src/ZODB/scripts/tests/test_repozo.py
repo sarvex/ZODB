@@ -79,13 +79,11 @@ class OurDB:
         import random
         import transaction
         tree = self.gettree()
-        for dummy in range(100):
+        for _ in range(100):
             if random.random() < 0.6:
                 tree[random.randrange(100000)] = random.randrange(100000)
-            else:
-                keys = tree.keys()
-                if keys:
-                    del tree[keys[0]]
+            elif keys := tree.keys():
+                del tree[keys[0]]
         transaction.commit()
         self.pos = self.db.storage._pos
         self.maxkey = self.db.storage._oid
@@ -97,8 +95,7 @@ class Test_parseargs(unittest.TestCase):
     # Python 2.6 lacks this
     def assertIn(self, member, container, msg=None):
         if member not in container:
-            standardMsg = '%s not found in %s' % (repr(member),
-                                                  repr(container))
+            standardMsg = f'{repr(member)} not found in {repr(container)}'
             self.fail(self._formatMessage(msg, standardMsg))
 
     def setUp(self):
@@ -380,10 +377,7 @@ class Test_concat(OptionsTestBase, unittest.TestCase):
         if self._repository_directory is None:
             self._repository_directory = tempfile.mkdtemp()
         fqn = os.path.join(self._repository_directory, name)
-        if gzip_file:
-            _opener = _GzipCloser
-        else:
-            _opener = open
+        _opener = _GzipCloser if gzip_file else open
         with _opener(fqn, 'wb') as f:
             f.write(text)
             f.flush()
@@ -401,7 +395,7 @@ class Test_concat(OptionsTestBase, unittest.TestCase):
         self.assertEqual(sum, md5(b'ABC').hexdigest())
 
     def test_w_gzipped_files_no_ofp(self):
-        files = [self._makeFile('%s.fsz' % x, x.encode(), True) for x in 'ABC']
+        files = [self._makeFile(f'{x}.fsz', x.encode(), True) for x in 'ABC']
         bytes, sum = self._callFUT(files, None)
         self.assertEqual(bytes, 3)
         self.assertEqual(sum, md5(b'ABC').hexdigest())
@@ -428,9 +422,7 @@ class Test_gen_filename(OptionsTestBase, unittest.TestCase):
 
     def _callFUT(self, options, ext=_marker):
         from ZODB.scripts.repozo import gen_filename
-        if ext is _marker:
-            return gen_filename(options)
-        return gen_filename(options, ext)
+        return gen_filename(options) if ext is _marker else gen_filename(options, ext)
 
     def test_explicit_ext(self):
         options = self._makeOptions(test_now = (2010, 5, 14, 12, 52, 31))
@@ -490,18 +482,20 @@ class Test_find_files(OptionsTestBase, unittest.TestCase):
 
     def test_explicit_date(self):
         options = self._makeOptions(date='2010-05-14-13-30-57')
-        files = []
-        for h, m, s, e in [(2, 13, 14, '.fs'),
-                           (2, 13, 14, '.dat'),
-                           (3, 14, 15, '.deltafs'),
-                           (4, 14, 15, '.deltafs'),
-                           (5, 14, 15, '.deltafs'),
-                           (12, 13, 14, '.fs'),
-                           (12, 13, 14, '.dat'),
-                           (13, 14, 15, '.deltafs'),
-                           (14, 15, 16, '.deltafs'),
-                          ]:
-            files.append(self._makeFile(h, m, s, e))
+        files = [
+            self._makeFile(h, m, s, e)
+            for h, m, s, e in [
+                (2, 13, 14, '.fs'),
+                (2, 13, 14, '.dat'),
+                (3, 14, 15, '.deltafs'),
+                (4, 14, 15, '.deltafs'),
+                (5, 14, 15, '.deltafs'),
+                (12, 13, 14, '.fs'),
+                (12, 13, 14, '.dat'),
+                (13, 14, 15, '.deltafs'),
+                (14, 15, 16, '.deltafs'),
+            ]
+        ]
         found = self._callFUT(options)
         # Older files, .dat file not included
         self.assertEqual(found, [files[5], files[7]])
@@ -509,18 +503,20 @@ class Test_find_files(OptionsTestBase, unittest.TestCase):
     def test_using_gen_filename(self):
         options = self._makeOptions(date=None,
                                     test_now=(2010, 5, 14, 13, 30, 57))
-        files = []
-        for h, m, s, e in [(2, 13, 14, '.fs'),
-                           (2, 13, 14, '.dat'),
-                           (3, 14, 15, '.deltafs'),
-                           (4, 14, 15, '.deltafs'),
-                           (5, 14, 15, '.deltafs'),
-                           (12, 13, 14, '.fs'),
-                           (12, 13, 14, '.dat'),
-                           (13, 14, 15, '.deltafs'),
-                           (14, 15, 16, '.deltafs'),
-                          ]:
-            files.append(self._makeFile(h, m, s, e))
+        files = [
+            self._makeFile(h, m, s, e)
+            for h, m, s, e in [
+                (2, 13, 14, '.fs'),
+                (2, 13, 14, '.dat'),
+                (3, 14, 15, '.deltafs'),
+                (4, 14, 15, '.deltafs'),
+                (5, 14, 15, '.deltafs'),
+                (12, 13, 14, '.fs'),
+                (12, 13, 14, '.dat'),
+                (13, 14, 15, '.deltafs'),
+                (14, 15, 16, '.deltafs'),
+            ]
+        ]
         found = self._callFUT(options)
         # Older files, .dat file not included
         self.assertEqual(found, [files[5], files[7]])
@@ -859,18 +855,20 @@ class Test_do_recover(OptionsTestBase, unittest.TestCase):
     def test_no_files_before_explicit_date(self):
         from ZODB.scripts.repozo import NoFiles
         options = self._makeOptions(date='2010-05-13-13-30-57')
-        files = []
-        for h, m, s, e in [(2, 13, 14, '.fs'),
-                           (2, 13, 14, '.dat'),
-                           (3, 14, 15, '.deltafs'),
-                           (4, 14, 15, '.deltafs'),
-                           (5, 14, 15, '.deltafs'),
-                           (12, 13, 14, '.fs'),
-                           (12, 13, 14, '.dat'),
-                           (13, 14, 15, '.deltafs'),
-                           (14, 15, 16, '.deltafs'),
-                          ]:
-            files.append(self._makeFile(h, m, s, e))
+        files = [
+            self._makeFile(h, m, s, e)
+            for h, m, s, e in [
+                (2, 13, 14, '.fs'),
+                (2, 13, 14, '.dat'),
+                (3, 14, 15, '.deltafs'),
+                (4, 14, 15, '.deltafs'),
+                (5, 14, 15, '.deltafs'),
+                (12, 13, 14, '.fs'),
+                (12, 13, 14, '.dat'),
+                (13, 14, 15, '.deltafs'),
+                (14, 15, 16, '.deltafs'),
+            ]
+        ]
         self.assertRaises(NoFiles, self._callFUT, options)
 
     def test_w_full_backup_latest_no_index(self):
@@ -948,10 +946,7 @@ class Test_do_verify(OptionsTestBase, unittest.TestCase):
         if text is None:
             text = name
         fqn = os.path.join(self._repository_directory, name)
-        if ext.endswith('fsz'):
-            _opener = _GzipCloser
-        else:
-            _opener = open
+        _opener = _GzipCloser if ext.endswith('fsz') else open
         with _opener(fqn, 'wb') as f:
             f.write(text.encode())
             f.flush()

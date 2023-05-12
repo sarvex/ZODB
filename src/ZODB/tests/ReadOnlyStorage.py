@@ -19,7 +19,7 @@ class ReadOnlyStorage:
     def _create_data(self):
         # test a read-only storage that already has some data
         self.oids = {}
-        for i in range(10):
+        for _ in range(10):
             oid = self._storage.new_oid()
             revid = self._dostore(oid)
             self.oids[oid] = revid

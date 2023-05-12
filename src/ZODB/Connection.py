@@ -71,7 +71,7 @@ def resetCaches():
 
 def className(obj):
     cls = type(obj)
-    return "%s.%s" % (cls.__module__, cls.__name__)
+    return f"{cls.__module__}.{cls.__name__}"
 
 
 @implementer(IConnection,
@@ -656,10 +656,10 @@ class Connection(ExportImport, object):
 
                 self._creating[oid] = implicitly_adding
 
-            else:
-                if (oid in self._invalidated
+            elif (oid in self._invalidated
                     and not hasattr(obj, '_p_resolveConflict')):
-                    raise ConflictError(object=obj)
+                raise ConflictError(object=obj)
+            else:
                 self._modified.append(oid)
 
             p = writer.serialize(obj)  # This calls __getstate__ of obj
@@ -668,9 +668,7 @@ class Connection(ExportImport, object):
 
             if isinstance(obj, Blob):
                 if not IBlobStorage.providedBy(self._storage):
-                    raise Unsupported(
-                        "Storing Blobs in %s is not supported." %
-                        repr(self._storage))
+                    raise Unsupported(f"Storing Blobs in {repr(self._storage)} is not supported.")
                 if obj.opened():
                     raise ValueError("Can't commit with opened blobs.")
                 blobfilename = obj._uncommitted()
@@ -815,7 +813,7 @@ class Connection(ExportImport, object):
 
     def sortKey(self):
         """Return a consistent sort key for this connection."""
-        return "%s:%s" % (self._storage.sortKey(), id(self))
+        return f"{self._storage.sortKey()}:{id(self)}"
 
     # Data manager (ISavepointDataManager) methods
     ##########################################################################
@@ -832,8 +830,7 @@ class Connection(ExportImport, object):
     # called at transaction boundaries.
     def _storage_sync(self, *ignored):
         self._readCurrent.clear()
-        sync = getattr(self._storage, 'sync', 0)
-        if sync:
+        if sync := getattr(self._storage, 'sync', 0):
             sync()
         self._flush_invalidations()
 
@@ -1348,9 +1345,8 @@ class TmpStore:
     def _getCleanFilename(self, oid, tid):
         return os.path.join(
             self._getBlobPath(),
-            "%s-%s%s" % (utils.oid_repr(oid), utils.tid_repr(tid),
-                         SAVEPOINT_SUFFIX,)
-            )
+            f"{utils.oid_repr(oid)}-{utils.tid_repr(tid)}{SAVEPOINT_SUFFIX}",
+        )
 
     def temporaryDirectory(self):
         return self._storage.temporaryDirectory()
@@ -1397,7 +1393,7 @@ class RootConvenience(object):
         names = " ".join(sorted(self._root))
         if len(names) > 60:
             names = names[:57].rsplit(' ', 1)[0] + ' ...'
-        return "<root: %s>" % names
+        return f"<root: {names}>"
 
 large_object_message = """The %s
 object you're saving is large. (%s bytes.)

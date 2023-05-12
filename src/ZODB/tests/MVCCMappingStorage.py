@@ -62,8 +62,7 @@ class MVCCMappingStorage(MappingStorage):
         assert not version, "Versions are not supported"
         if self._data_snapshot is None:
             self.poll_invalidations()
-        info = self._data_snapshot.get(oid)
-        if info:
+        if info := self._data_snapshot.get(oid):
             return info
         raise ZODB.POSException.POSKeyError(oid)
 
@@ -74,11 +73,7 @@ class MVCCMappingStorage(MappingStorage):
         self._main_lock_acquire()
         try:
 
-            if self._transactions:
-                new_tid = self._transactions.maxKey()
-            else:
-                new_tid = b''
-
+            new_tid = self._transactions.maxKey() if self._transactions else b''
             # Copy the current data into a snapshot. This is obviously
             # very inefficient for large storages, but it's good for
             # tests.
@@ -88,12 +83,11 @@ class MVCCMappingStorage(MappingStorage):
                     tid = tid_data.maxKey()
                     self._data_snapshot[oid] = tid_data[tid], tid
 
-            if self._polled_tid:
-                if self._polled_tid not in self._transactions:
-                    # This connection is so old that we can no longer enumerate
-                    # all the changes.
-                    self._polled_tid = new_tid
-                    return None
+            if self._polled_tid and self._polled_tid not in self._transactions:
+                # This connection is so old that we can no longer enumerate
+                # all the changes.
+                self._polled_tid = new_tid
+                return None
 
             changed_oids = set()
             for tid, txn in self._transactions.items(

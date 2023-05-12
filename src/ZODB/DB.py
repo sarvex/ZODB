@@ -145,9 +145,7 @@ class ConnectionPool(AbstractConnectionPool):
         n = len(self.all)
         limit = self.size
         if n > limit:
-            reporter = logger.warning
-            if n > 2 * limit:
-                reporter = logger.critical
+            reporter = logger.critical if n > 2 * limit else logger.warning
             reporter("DB.open() has %s open connections with a pool_size "
                      "of %s", n, limit)
 
@@ -305,10 +303,7 @@ def getTID(at, before):
     if at is not None:
         if before is not None:
             raise ValueError('can only pass zero or one of `at` and `before`')
-        if isinstance(at, datetime.datetime):
-            at = toTimeStamp(at)
-        else:
-            at = TimeStamp(at)
+        at = toTimeStamp(at) if isinstance(at, datetime.datetime) else TimeStamp(at)
         before = at.laterThan(at).raw()
     elif before is not None:
         if isinstance(before, datetime.datetime):
@@ -439,24 +434,23 @@ class DB(object):
         else:
             temp_storage = storage
         try:
-            try:
-                temp_storage.load(z64, '')
-            except KeyError:
-                # Create the database's root in the storage if it doesn't exist
-                from persistent.mapping import PersistentMapping
-                root = PersistentMapping()
-                # Manually create a pickle for the root to put in the storage.
-                # The pickle must be in the special ZODB format.
-                file = BytesIO()
-                p = Pickler(file, _protocol)
-                p.dump((root.__class__, None))
-                p.dump(root.__getstate__())
-                t = transaction.Transaction()
-                t.description = 'initial database creation'
-                temp_storage.tpc_begin(t)
-                temp_storage.store(z64, None, file.getvalue(), '', t)
-                temp_storage.tpc_vote(t)
-                temp_storage.tpc_finish(t)
+            temp_storage.load(z64, '')
+        except KeyError:
+            # Create the database's root in the storage if it doesn't exist
+            from persistent.mapping import PersistentMapping
+            root = PersistentMapping()
+            # Manually create a pickle for the root to put in the storage.
+            # The pickle must be in the special ZODB format.
+            file = BytesIO()
+            p = Pickler(file, _protocol)
+            p.dump((root.__class__, None))
+            p.dump(root.__getstate__())
+            t = transaction.Transaction()
+            t.description = 'initial database creation'
+            temp_storage.tpc_begin(t)
+            temp_storage.store(z64, None, file.getvalue(), '', t)
+            temp_storage.tpc_vote(t)
+            temp_storage.tpc_finish(t)
         finally:
             if IMVCCStorage.providedBy(temp_storage):
                 temp_storage.release()
@@ -517,8 +511,8 @@ class DB(object):
         def f(con, detail=detail):
             for oid, ob in con._cache.items():
                 module = getattr(ob.__class__, '__module__', '')
-                module = module and '%s.' % module or ''
-                c = "%s%s" % (module, ob.__class__.__name__)
+                module = module and f'{module}.' or ''
+                c = f"{module}{ob.__class__.__name__}"
                 if c in detail:
                     detail[c] += 1
                 else:
@@ -543,7 +537,7 @@ class DB(object):
                         id = d['__name__']
 
                 module = getattr(ob.__class__, '__module__', '')
-                module = module and ('%s.' % module) or ''
+                module = module and f'{module}.' or ''
 
                 # What refcount ('rc') should we return?  The intent is
                 # that we return the true Python refcount, but as if the
@@ -555,15 +549,16 @@ class DB(object):
                 # sys.getrefcount(ob) returns.  But, in addition to that,
                 # the cache holds an extra reference on non-ghost objects,
                 # and we also want to pretend that doesn't exist.
-                detail.append({
-                    'conn_no': cn,
-                    'oid': oid,
-                    'id': id,
-                    'klass': "%s%s" % (module, ob.__class__.__name__),
-                    'rc': rc(ob) - 3 - (ob._p_changed is not None),
-                    'state': ob._p_changed,
-                    #'references': con.references(oid),
-                    })
+                detail.append(
+                    {
+                        'conn_no': cn,
+                        'oid': oid,
+                        'id': id,
+                        'klass': f"{module}{ob.__class__.__name__}",
+                        'rc': rc(ob) - 3 - (ob._p_changed is not None),
+                        'state': ob._p_changed,
+                    }
+                )
 
         self._connectionMap(f)
         return detail
@@ -771,7 +766,7 @@ class DB(object):
                     d = d[0]
             else:
                 d = ''
-            d = "%s (%s)" % (d, len(c._cache))
+            d = f"{d} ({len(c._cache)})"
 
             # output UTC time with the standard Z time zone indicator
             result.append({
@@ -891,14 +886,10 @@ class DB(object):
         return f()
 
     def undoLog(self, *args, **kw):
-        if not self.supportsUndo():
-            return ()
-        return self.storage.undoLog(*args, **kw)
+        return () if not self.supportsUndo() else self.storage.undoLog(*args, **kw)
 
     def undoInfo(self, *args, **kw):
-        if not self.supportsUndo():
-            return ()
-        return self.storage.undoInfo(*args, **kw)
+        return () if not self.supportsUndo() else self.storage.undoInfo(*args, **kw)
 
     def undoMultiple(self, ids, txn=None):
         """Undo multiple transactions identified by ids.
@@ -998,8 +989,7 @@ class TransactionalUndo(object):
 
     def commit(self, transaction):
         for tid in self._tids:
-            result = self._storage.undo(tid, transaction)
-            if result:
+            if result := self._storage.undo(tid, transaction):
                 self._oids.update(result[1])
 
     def tpc_vote(self, transaction):
@@ -1016,7 +1006,7 @@ class TransactionalUndo(object):
         self._storage.tpc_abort(transaction)
 
     def sortKey(self):
-        return "%s:%s" % (self._storage.sortKey(), id(self))
+        return f"{self._storage.sortKey()}:{id(self)}"
 
 def connection(*args, **kw):
     return DB(*args, **kw).open_then_close_db_when_connection_closes()

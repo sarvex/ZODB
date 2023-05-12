@@ -44,7 +44,7 @@ def find_paths(root, maxdist):
                 continue
             for k, v in items:
                 oid = getattr(v, '_p_oid', None)
-                objs.append(("%s.%s" % (path, k), v, oid, dist + 1))
+                objs.append((f"{path}.{k}", v, oid, dist + 1))
 
     return paths
 
@@ -118,7 +118,7 @@ def Main():
     for o, v in opts:
         if o == '-P':
             PACK = 1
-        if o == '-v':
+        elif o == '-v':
             VERBOSE += 1
     main(path)
 

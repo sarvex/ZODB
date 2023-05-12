@@ -61,8 +61,7 @@ class TestPList(unittest.TestCase):
             def mycmp(a, b):
                 r = cmp(a, b)
                 if r < 0: return -1
-                if r > 0: return 1
-                return r
+                return 1 if r > 0 else r
 
             all = [l0, l1, l2, u, u0, u1, u2, uu, uu0, uu1, uu2]
             for a in all:
@@ -119,7 +118,7 @@ class TestPList(unittest.TestCase):
         uu2 = u2[:]
         uu2[:0] = [-2, -1]
         eq(uu2, [-2, -1, 0, 1], "uu2 == [-2, -1, 0, 1]")
-        uu2[0:] = []
+        uu2[:] = []
         eq(uu2, [], "uu2 == []")
 
         # Test __contains__
@@ -132,7 +131,7 @@ class TestPList(unittest.TestCase):
 
         uu2 = u2[:]
         del uu2[1:2]
-        del uu2[0:1]
+        del uu2[:1]
         eq(uu2, [], "uu2 == []")
 
         uu2 = u2[:]

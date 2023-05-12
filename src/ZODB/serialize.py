@@ -175,13 +175,11 @@ class ObjectWriter:
         self._p = Pickler(self._file, _protocol)
         if sys.version_info[0] < 3:
             self._p.inst_persistent_id = self.persistent_id
-            # PyPy uses a python implementation of cPickle in both Python 2
-            # and Python 3. We can't really detect inst_persistent_id as its
-            # a magic attribute that's not readable, but it doesn't hurt to
-            # simply always assign to persistent_id also
-            self._p.persistent_id = self.persistent_id
-        else:
-            self._p.persistent_id = self.persistent_id
+        # PyPy uses a python implementation of cPickle in both Python 2
+        # and Python 3. We can't really detect inst_persistent_id as its
+        # a magic attribute that's not readable, but it doesn't hurt to
+        # simply always assign to persistent_id also
+        self._p.persistent_id = self.persistent_id
         self._stack = []
         if obj is not None:
             self._stack.append(obj)
@@ -291,7 +289,7 @@ class ObjectWriter:
             # Not persistent, pickle normally
             return None
 
-        if not (oid is None or isinstance(oid, bytes)):
+        if oid is not None and not isinstance(oid, bytes):
             # Deserves a closer look:
 
             # Make sure it's not a descriptor
@@ -378,20 +376,7 @@ class ObjectWriter:
 
         klass = type(obj)
         if hasattr(klass, '__getnewargs__'):
-            # We don't want to save newargs in object refs.
-            # It's possible that __getnewargs__ is degenerate and
-            # returns (), but we don't want to have to deghostify
-            # the object to find out.
-
-            # Note that this has the odd effect that, if the class has
-            # __getnewargs__ of its own, we'll lose the optimization
-            # of caching the class info.
-
-            if database_name is not None:
-                return ['n', (database_name, oid)]
-
-            return oid
-
+            return ['n', (database_name, oid)] if database_name is not None else oid
         # Note that we never get here for persistent classes.
         # We'll use direct refs for normal classes.
 
@@ -415,10 +400,7 @@ class ObjectWriter:
             # This is a persistent class with a non-empty module.  This
             # uses pickle format #3 or #7.
             klass = klass.__module__, klass.__name__
-            if newargs is None:
-                meta = klass, None
-            else:
-                meta = klass, newargs()
+            meta = (klass, None) if newargs is None else (klass, newargs())
         elif newargs is None:
             # Pickle format #1.
             meta = klass
@@ -455,8 +437,7 @@ class NewObjectIterator:
 
     def __next__(self):
         if self._stack:
-            elt = self._stack.pop()
-            return elt
+            return self._stack.pop()
         else:
             raise StopIteration
 
@@ -518,11 +499,10 @@ class ObjectReader:
         if isinstance(klass, tuple):
             klass = self._get_class(*klass)
 
-        if issubclass(klass, broken.Broken):
-            # We got a broken class. We might need to make it
-            # PersistentBroken
-            if not issubclass(klass, broken.PersistentBroken):
-                klass = broken.persistentBroken(klass)
+        if issubclass(klass, broken.Broken) and not issubclass(
+            klass, broken.PersistentBroken
+        ):
+            klass = broken.persistentBroken(klass)
 
         try:
             obj = klass.__new__(klass)
@@ -572,9 +552,7 @@ class ObjectReader:
             # this happens on Python 3 when all bytes in the oid are < 0x80
             oid = oid.encode('ascii')
         obj = self._cache.get(oid, None)
-        if obj is not None:
-            return obj
-        return self._conn.get(oid)
+        return obj if obj is not None else self._conn.get(oid)
 
     def load_multi_oid(self, database_name, oid):
         conn = self._conn.get_connection(database_name)
@@ -589,10 +567,10 @@ class ObjectReader:
         klass = unpickler.load()
         if isinstance(klass, tuple):
             klass, args = klass
-            if isinstance(klass, tuple):
-                # old style reference
-                return "%s.%s" % klass
-        return "%s.%s" % (klass.__module__, klass.__name__)
+        if isinstance(klass, tuple):
+            # old style reference
+            return "%s.%s" % klass
+        return f"{klass.__module__}.{klass.__name__}"
 
     def getGhost(self, pickle):
         unpickler = self._get_unpickler(pickle)
@@ -612,11 +590,10 @@ class ObjectReader:
             # Definitely new style direct class reference
             args = ()
 
-        if issubclass(klass, broken.Broken):
-            # We got a broken class. We might need to make it
-            # PersistentBroken
-            if not issubclass(klass, broken.PersistentBroken):
-                klass = broken.persistentBroken(klass)
+        if issubclass(klass, broken.Broken) and not issubclass(
+            klass, broken.PersistentBroken
+        ):
+            klass = broken.persistentBroken(klass)
 
         return klass.__new__(klass, *args)
 

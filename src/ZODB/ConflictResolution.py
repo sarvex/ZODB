@@ -98,7 +98,7 @@ class IPersistentReference(zope.interface.Interface):
     weak = zope.interface.Attribute(
         '''bool: whether this reference is weak''')
 
-    def __cmp__(other):
+    def __cmp__(self):
         '''if other is equivalent reference, return 0; else raise ValueError.
 
         Equivalent in this case means that oid and database_name are the same.
@@ -200,7 +200,7 @@ class PersistentReference(object):
         return self.__cmp__(other) >= 0
 
     def __repr__(self):
-        return "PR(%s %s)" % (id(self), self.data)
+        return f"PR({id(self)} {self.data})"
 
     def __getstate__(self):
         raise PicklingError("Can't pickle PersistentReference")

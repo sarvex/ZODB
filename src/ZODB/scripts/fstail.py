@@ -34,8 +34,7 @@ def main(path, ntxn):
             hash = sha1(th.get_raw_data()).digest()
             l = len(str(th.get_timestamp())) + 1
             th.read_meta()
-            print("%s: hash=%s" % (th.get_timestamp(),
-                                   binascii.hexlify(hash).decode()))
+            print(f"{th.get_timestamp()}: hash={binascii.hexlify(hash).decode()}")
             print(("user=%r description=%r length=%d offset=%d"
                    % (th.user, th.descr, th.length, th.get_data_offset())))
             print()

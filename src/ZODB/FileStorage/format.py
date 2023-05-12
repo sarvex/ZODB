@@ -201,7 +201,7 @@ class FileStorageFormatter(object):
         return h.tid
 
     def fail(self, pos, msg, *args):
-        s = ("%s:%s:" + msg) % ((self._name, pos) + args)
+        s = f"%s:%s:{msg}" % ((self._name, pos) + args)
         logger.error(s)
         raise CorruptedError(s)
 
@@ -212,7 +212,7 @@ class FileStorageFormatter(object):
         self.ltid = th.tid
         if th.status == "c":
             self.fail(pos, "transaction with checkpoint flag set")
-        if not th.status in " pu": # recognize " ", "p", and "u" as valid
+        if th.status not in " pu": # recognize " ", "p", and "u" as valid
             self.fail(pos, "invalid transaction status: %r", th.status)
         if th.tlen < th.headerlen():
             self.fail(pos, "invalid transaction header: "

@@ -72,11 +72,7 @@ class Test(unittest.TestCase):
 
     def testUpdate(self):
         index = self.index
-        d={}
-
-        for i in range(200):
-            d[p64(i*1000)]=(i*1000+1)
-
+        d = {p64(i*1000): (i*1000+1) for i in range(200)}
         index.update(d)
 
         for i in range(400,600):
@@ -95,15 +91,11 @@ class Test(unittest.TestCase):
         self.assertEqual(len(index), 600)
 
     def testKeys(self):
-        keys = list(iter(self.index))
-        keys.sort()
-
+        keys = sorted(iter(self.index))
         for i, k in enumerate(keys):
             self.assertEqual(k, p64(i * 1000))
 
-        keys = list(six.iterkeys(self.index))
-        keys.sort()
-
+        keys = sorted(six.iterkeys(self.index))
         for i, k in enumerate(keys):
             self.assertEqual(k, p64(i * 1000))
 
@@ -114,9 +106,7 @@ class Test(unittest.TestCase):
             self.assertEqual(k, p64(i * 1000))
 
     def testValues(self):
-        values = list(six.itervalues(self.index))
-        values.sort()
-
+        values = sorted(six.itervalues(self.index))
         for i, v in enumerate(values):
             self.assertEqual(v, (i * 1000 + 1))
 
@@ -127,9 +117,7 @@ class Test(unittest.TestCase):
             self.assertEqual(v, (i * 1000 + 1))
 
     def testItems(self):
-        items = list(six.iteritems(self.index))
-        items.sort()
-
+        items = sorted(six.iteritems(self.index))
         for i, item in enumerate(items):
             self.assertEqual(item, (p64(i * 1000), (i * 1000 + 1)))
 

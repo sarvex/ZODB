@@ -39,7 +39,7 @@ def tearDown(test):
 
 class ResolveableWhenStateDoesNotChange(persistent.Persistent):
 
-    def _p_resolveConflict(old, committed, new):
+    def _p_resolveConflict(self, committed, new):
         raise ZODB.POSException.ConflictError
 
 class Unresolvable(persistent.Persistent):
@@ -120,7 +120,7 @@ class Resolveable(persistent.Persistent):
                     continue
                 raise ZODB.POSException.ConflictError
             if k not in new:
-                if k in committed and committed[k] == old[k]:
+                if committed[k] == old[k]:
                     continue
                 raise ZODB.POSException.ConflictError
             if committed[k] != old[k]:
@@ -129,10 +129,8 @@ class Resolveable(persistent.Persistent):
                     continue
                 raise ZODB.POSException.ConflictError
             if new[k] != old[k]:
-                if committed[k] == old[k]:
-                    resolved[k] = new[k]
-                    continue
-                raise ZODB.POSException.ConflictError
+                resolved[k] = new[k]
+                continue
             resolved[k] = old[k]
 
         for k in new:

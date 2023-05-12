@@ -96,7 +96,7 @@ class ZODBClientThread(TestThread):
         else:
             raise ConflictError("Exceeded %d attempts to store" % MAXRETRIES)
 
-        for j in range(MAXRETRIES):
+        for _ in range(MAXRETRIES):
             try:
                 return root.get(name)
             except ConflictError:
@@ -176,7 +176,7 @@ class ExtStorageClientThread(StorageClientThread):
                 names += ["do_loadSerial", "do_undoLog", "do_iterator"]
 
         ops = [getattr(self, meth) for meth in names]
-        assert ops, "Didn't find an storage ops in %s" % self.storage
+        assert ops, f"Didn't find an storage ops in {self.storage}"
         # do a store to guarantee there's at least one oid in self.oids
         self.dostore(0)
 
@@ -207,14 +207,12 @@ class ExtStorageClientThread(StorageClientThread):
             # It's hard to detect that a ZEO ClientStorage
             # doesn't have this method, but does have all the others.
             return
-        for obj in iter:
-            pass
 
 class MTStorage:
     "Test a storage with multiple client threads executing concurrently."
 
     def _checkNThreads(self, n, constructor, *args):
-        threads = [constructor(*args) for i in range(n)]
+        threads = [constructor(*args) for _ in range(n)]
         for t in threads:
             t.start()
         for t in threads:

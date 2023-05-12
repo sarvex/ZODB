@@ -59,19 +59,15 @@ def write_zeoversion(path, version):
 def main(args):
     version, date = args
 
-    replace("setup.py",
-            r'^VERSION = "\S+"$',
-            'VERSION = "%s"' % version)
-    replace("src/ZODB/__init__.py",
-            r'__version__ = "\S+"',
-            '__version__ = "%s"' % version)
-    replace("src/ZEO/__init__.py",
-            r'version = "\S+"',
-            'version = "%s"' % version)
+    replace("setup.py", r'^VERSION = "\S+"$', f'VERSION = "{version}"')
+    replace(
+        "src/ZODB/__init__.py",
+        r'__version__ = "\S+"',
+        f'__version__ = "{version}"',
+    )
+    replace("src/ZEO/__init__.py", r'version = "\S+"', f'version = "{version}"')
     write_zeoversion("src/ZEO/version.txt", version)
-    replace("NEWS.txt",
-            r"^Release date: .*",
-            "Release date: %s" % date)
+    replace("NEWS.txt", r"^Release date: .*", f"Release date: {date}")
     replace("doc/guide/zodb.tex",
             r"release{\S+}",
             "release{%s}" % version)

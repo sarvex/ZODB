@@ -78,9 +78,8 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.globs = {}
         name = self.__class__.__name__
-        mname = getattr(self, '_TestCase__testMethodName', '')
-        if mname:
-            name += '-' + mname
+        if mname := getattr(self, '_TestCase__testMethodName', ''):
+            name += f'-{mname}'
         setUp(self, name)
 
     tearDown = tearDown
@@ -94,7 +93,7 @@ class P(persistent.Persistent):
         self.name = name
 
     def __repr__(self):
-        return 'P(%s)' % self.name
+        return f'P({self.name})'
 
 class MininalTestLayer:
 
@@ -151,7 +150,7 @@ def assert_deprecated(func, warning_text=''):
 def wait(func=None, timeout=30):
     if func is None:
         return lambda f: wait(f, timeout)
-    for i in range(int(timeout*100)):
+    for _ in range(int(timeout*100)):
         if func():
             return
         time.sleep(.01)

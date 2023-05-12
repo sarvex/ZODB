@@ -75,19 +75,13 @@ from ZODB.POSException import POSKeyError
 # explaining what the problem(s) is(are).
 def report(oid, data, serial, missing):
     from_mod, from_class = get_pickle_metadata(data)
-    if len(missing) > 1:
-        plural = "s"
-    else:
-        plural = ""
+    plural = "s" if len(missing) > 1 else ""
     ts = TimeStamp(serial)
-    print("oid %s %s.%s" % (hex(u64(oid)), from_mod, from_class))
-    print("last updated: %s, tid=%s" % (ts, hex(u64(serial))))
-    print("refers to invalid object%s:" % plural)
+    print(f"oid {hex(u64(oid))} {from_mod}.{from_class}")
+    print(f"last updated: {ts}, tid={hex(u64(serial))}")
+    print(f"refers to invalid object{plural}:")
     for oid, info, reason in missing:
-        if isinstance(info, tuple):
-            description = "%s.%s" % info
-        else:
-            description = str(info)
+        description = "%s.%s" % info if isinstance(info, tuple) else str(info)
         print("\toid %s %s: %r" % (oid_repr(oid), reason, description))
     print()
 
@@ -130,8 +124,7 @@ def main(path=None):
                 traceback.print_exc()
             noload[oid] = 1
 
-    inactive = noload.copy()
-    inactive.update(undone)
+    inactive = noload | undone
     for oid in fs._index.keys():
         if oid in inactive:
             continue

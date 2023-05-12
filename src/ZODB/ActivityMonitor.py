@@ -42,16 +42,16 @@ class ActivityMonitor:
 
     def trim(self, now):
         self.trim_lock.acquire()
-        
+
         log = self.log
         cutoff = now - self.history_length
         n = 0
         loglen = len(log)
         while n < loglen and log[n][0] < cutoff:
-            n = n + 1
+            n += 1
         if n:
             del log[:n]
-        
+
         self.trim_lock.release()
 
     def setHistoryLength(self, history_length):
@@ -62,21 +62,21 @@ class ActivityMonitor:
         return self.history_length
 
     def getActivityAnalysis(self, start=0, end=0, divisions=10):
-        res = []
         now = time.time()
         if start == 0:
             start = now - self.history_length
         if end == 0:
             end = now
-        for n in range(divisions):
-            res.append({
+        res = [
+            {
                 'start': start + (end - start) * n / divisions,
                 'end': start + (end - start) * (n + 1) / divisions,
                 'loads': 0,
                 'stores': 0,
                 'connections': 0,
-                })
-
+            }
+            for n in range(divisions)
+        ]
         div = res[0]
         div_end = div['end']
         div_index = 0
