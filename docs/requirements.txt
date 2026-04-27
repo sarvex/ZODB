@@ -1,6 +1,6 @@
 Sphinx
 # Silence dependabot claiming a security issue in older versions:
-pygments >= 2.7.4
+pygments >= 2.20.0
 docutils
 ZODB
 sphinxcontrib_zopeext
